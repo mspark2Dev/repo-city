@@ -75,7 +75,19 @@ cd services/analyzer && uv sync && uv run uvicorn repocity.app:app --port 8787
 pnpm dev            # http://localhost:5173
 ```
 
-Enter any local repository path in the field at the top left. To analyze without the UI:
+The field at the top left takes either a local path or a git URL:
+
+```
+/path/to/your/project
+https://github.com/owner/repo.git
+git@gitlab.example.com:group/repo.git
+```
+
+Remote repositories are cloned shallowly into `~/.local/share/repocity/clones/`. An existing
+checkout is reused rather than refetched, so changes you applied there are not thrown away.
+Private repositories use whatever credentials git already has; repoCity never prompts.
+
+To analyze without the UI:
 
 ```bash
 cd services/analyzer

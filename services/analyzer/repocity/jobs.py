@@ -11,7 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Literal
 
-Status = Literal["running", "done", "error"]
+Status = Literal["cloning", "running", "done", "error"]
 
 
 @dataclass(slots=True)
@@ -23,6 +23,8 @@ class Job:
     done: int = 0
     total: int = 0
     error: str | None = None
+    source: str | None = None
+    resolved_path: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -32,6 +34,8 @@ class Job:
             "done": self.done,
             "total": self.total,
             "error": self.error,
+            "source": self.source,
+            "resolvedPath": self.resolved_path,
         }
 
 
@@ -39,8 +43,8 @@ class Job:
 class JobRegistry:
     _jobs: dict[str, Job] = field(default_factory=dict)
 
-    def create(self, project_id: str, path: str) -> Job:
-        job = Job(id=uuid.uuid4().hex[:12], project_id=project_id, path=path)
+    def create(self, project_id: str, path: str, source: str | None = None) -> Job:
+        job = Job(id=uuid.uuid4().hex[:12], project_id=project_id, path=path, source=source)
         self._jobs[job.id] = job
         return job
 

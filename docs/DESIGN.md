@@ -239,6 +239,29 @@ squarified treemap 은 남은 사각형을 면적 비율로 항상 꽉 채우므
 
 ---
 
+## 4-a. 분석 대상 해석 (`sources.py`)
+
+`path` 필드는 **로컬 디렉토리 경로 또는 git URL** 둘 다 받는다. 디렉토리면 그대로 쓰고,
+URL 이면 `~/.local/share/repocity/clones/<repo>-<hash>/` 에 shallow clone(`--depth 1
+--single-branch --no-tags`) 한 뒤 그 체크아웃을 분석한다.
+
+**[결정 9] git URL 을 그대로 `git` 에 넘기지 않는다.** 사용자가 입력한 문자열이 명령 인자가
+되는 지점이라, 다음을 강제한다:
+
+- 허용 전송: `https://` `http://` `ssh://` `git://` 그리고 scp 형식(`git@host:path`)
+- **`ext::` 등 전송 헬퍼 거부** — git 은 이걸 임의 명령 실행으로 해석한다
+- `-` 로 시작하는 값 거부 — `--upload-pack=...` 처럼 플래그로 읽힌다
+- `subprocess.run` 에 **인자 리스트**로 전달, 셸 미경유, `--` 로 옵션 종료
+- `GIT_TERMINAL_PROMPT=0` — 비공개 리포에서 git 이 비밀번호를 물으며 멈추면 요청이
+  실패가 아니라 **정지**한다
+- 5분 타임아웃
+
+이미 클론된 디렉토리가 있으면 **재사용하고 fetch 하지 않는다.** 에이전트가 그 체크아웃에
+변경을 적용했을 수 있고, 조용히 reset 하는 것은 작업을 잃는 것과 같다.
+
+클론은 캐시 디렉토리가 아니라 데이터 디렉토리에 둔다 — 캐시는 정의상 버려도 되는 것이지만
+여기에는 사용자가 적용한 변경이 남을 수 있다.
+
 ## 5. 정적 분석 파이프라인
 
 - **파서:** `tree-sitter` + `tree-sitter-language-pack` (언어별 빌드 불필요)
@@ -275,7 +298,7 @@ squarified treemap 은 남은 사각형을 면적 비율로 항상 꽉 채우므
 ### REST
 | 메서드 | 경로 | 요청 | 응답 |
 |---|---|---|---|
-| POST | `/api/v1/analyze` | `{path, exclude?}` | `202 {jobId, projectId}` — 즉시 반환, 백그라운드 분석 |
+| POST | `/api/v1/analyze` | `{path, exclude?}` | `202 {jobId, projectId, willClone}` — 즉시 반환, 백그라운드 분석 |
 | GET | `/api/v1/analyze/{jobId}` | – | `{status, done, total, error?}` |
 | GET | `/api/v1/projects/{projectId}/citymap` | – | `CityMap.json` |
 | GET | `/api/v1/projects/{projectId}/metrics/{node_id}` | – | `{metrics, source, imports[], importedBy[]}` |

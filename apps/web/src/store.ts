@@ -37,6 +37,7 @@ interface CityState {
   hovered: string | null
 
   progress: { done: number; total: number } | null
+  cloning: string | null
   transitions: Transition[]
   ghosts: Building[]
   baseline: CityMap | null
@@ -72,6 +73,7 @@ export const useCityStore = create<CityState>((set, get) => ({
   detail: null,
   hovered: null,
   progress: null,
+  cloning: null,
   transitions: [],
   ghosts: [],
   baseline: null,
@@ -92,11 +94,13 @@ export const useCityStore = create<CityState>((set, get) => ({
       error: null,
       proposal: null,
       progress: null,
+      cloning: null,
       transitions: [],
       ghosts: [],
     })
     try {
-      const { jobId, projectId } = await analyze(path)
+      const { jobId, projectId, willClone } = await analyze(path)
+      if (willClone) set({ cloning: path })
       const revisiting = get().projectId === projectId && get().city !== null
 
       if (!revisiting) {
@@ -123,14 +127,14 @@ export const useCityStore = create<CityState>((set, get) => ({
       if (!revisiting || !current || !sameStats(current.stats, fetched.stats)) {
         set({ city: fetched })
       }
-      set({ status: 'ready', progress: null, agentStatus: 'idle' })
+      set({ status: 'ready', progress: null, cloning: null, agentStatus: 'idle' })
 
       // The badge tells you whether refactoring is available before you try to use it.
       agentHealth()
         .then((llm) => set({ llm }))
         .catch(() => set({ llm: { ok: false, model: null, detail: 'unreachable' } }))
     } catch (error) {
-      set({ status: 'error', error: message(error), progress: null })
+      set({ status: 'error', error: message(error), progress: null, cloning: null })
     }
   },
 
@@ -244,16 +248,20 @@ function handleEvent(event: ServerEvent, set: Setter, get: Getter): void {
     case 'agent.error':
       set({ agentStatus: 'error', agentError: `${event.stage}: ${event.message}` })
       break
+    case 'analysis.cloning':
+      set({ cloning: event.url })
+      break
+
     case 'analysis.progress':
-      set({ progress: { done: event.done, total: event.total } })
+      set({ progress: { done: event.done, total: event.total }, cloning: null })
       break
 
     case 'analysis.done':
-      set({ progress: null })
+      set({ progress: null, cloning: null })
       break
 
     case 'analysis.error':
-      set({ status: 'error', error: event.message, progress: null })
+      set({ status: 'error', error: event.message, progress: null, cloning: null })
       break
 
     case 'citymap.delta': {

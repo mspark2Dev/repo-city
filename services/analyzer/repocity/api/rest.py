@@ -17,6 +17,7 @@ from ..build import build_city
 from ..delta import diff_cities
 from ..jobs import JobRegistry
 from ..schema import CityMap
+from ..sources import SourceError, clone_dir, looks_like_git_url, resolve
 from ..store import ProjectStore, UnknownProject
 from .ws import hub
 
@@ -39,6 +40,7 @@ class AnalyzeRequest(Wire):
 class AnalyzeResponse(Wire):
     job_id: str
     project_id: str
+    will_clone: bool = False
 
 
 class FileDetail(Wire):
@@ -55,21 +57,48 @@ class FileDetail(Wire):
 async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     """Start an analysis and return immediately.
 
-    The client subscribes to the project channel with the id returned here, so it sees
-    progress rather than a frozen window while a large repository is parsed.
+    `path` is either a local directory or a git URL. Cloning happens inside the job so a
+    slow network shows up as progress rather than a request that never returns.
     """
-    root = Path(request.path).expanduser()
-    if not root.is_dir():
-        raise HTTPException(status_code=400, detail=f"not a directory: {request.path}")
+    source = request.path.strip()
+    local = Path(source).expanduser()
 
-    project_id = project_id_for(root)
-    job = jobs.create(project_id, str(root))
-    asyncio.create_task(_run_analysis(job, root, tuple(request.exclude)))
-    return AnalyzeResponse(job_id=job.id, project_id=project_id)
+    if not local.is_dir() and not looks_like_git_url(source):
+        raise HTTPException(status_code=400, detail=f"not a directory, and not a git URL: {source}")
+
+    # A clone's project id is not known until it lands, so the id is derived from the
+    # source string. It stays stable across re-analyses of the same URL either way.
+    project_id = project_id_for(local) if local.is_dir() else project_id_for_source(source)
+    job = jobs.create(project_id, str(local), source=source)
+    asyncio.create_task(_run_analysis(job, source, tuple(request.exclude)))
+
+    # The clone starts before the client can subscribe, so the response says it is coming
+    # rather than relying on an event the client would miss on a fast clone.
+    will_clone = not local.is_dir() and not (clone_dir(source) / ".git").is_dir()
+    return AnalyzeResponse(job_id=job.id, project_id=project_id, will_clone=will_clone)
 
 
-async def _run_analysis(job, root: Path, excludes: tuple[str, ...]) -> None:
+async def _run_analysis(job, source: str, excludes: tuple[str, ...]) -> None:
     loop = asyncio.get_running_loop()
+
+    if looks_like_git_url(source) and not Path(source).expanduser().is_dir():
+        job.status = "cloning"
+        await hub.broadcast(
+            job.project_id, {"type": "analysis.cloning", "jobId": job.id, "url": source}
+        )
+
+    try:
+        resolved = await asyncio.to_thread(resolve, source)
+    except SourceError as exc:
+        job.status, job.error = "error", str(exc)
+        await hub.broadcast(
+            job.project_id, {"type": "analysis.error", "jobId": job.id, "message": str(exc)}
+        )
+        return
+
+    root = resolved.path
+    job.status = "running"
+    job.resolved_path = str(root)
 
     def on_progress(done: int, total: int) -> None:
         job.done, job.total = done, total
@@ -273,3 +302,7 @@ async def revert_snapshot(request: RevertRequest) -> dict:
 
 def project_id_for(root: Path) -> str:
     return hashlib.sha1(str(root.resolve()).encode()).hexdigest()[:12]
+
+
+def project_id_for_source(source: str) -> str:
+    return project_id_for(clone_dir(source))

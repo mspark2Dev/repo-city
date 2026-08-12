@@ -52,6 +52,10 @@ export function Inspector() {
           picture you are actually seeing.
         </p>
         <p className="hint">Click a building to inspect it. Double-click to fly to it.</p>
+        <p className="hint">
+          The field at the top left takes a local path or a git URL; remote repositories are
+          cloned shallowly into your data directory.
+        </p>
       </div>
     )
   }

@@ -20,7 +20,9 @@ async function json<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export async function analyze(path: string): Promise<{ jobId: string; projectId: string }> {
+export async function analyze(
+  path: string,
+): Promise<{ jobId: string; projectId: string; willClone: boolean }> {
   const response = await fetch(`${BASE}/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,10 +34,12 @@ export async function analyze(path: string): Promise<{ jobId: string; projectId:
 export interface JobStatus {
   jobId: string
   projectId: string
-  status: 'running' | 'done' | 'error'
+  status: 'cloning' | 'running' | 'done' | 'error'
   done: number
   total: number
   error: string | null
+  source: string | null
+  resolvedPath: string | null
 }
 
 export async function analysisStatus(jobId: string): Promise<JobStatus> {

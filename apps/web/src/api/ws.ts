@@ -21,6 +21,7 @@ export type ServerEvent =
       verdict: Verdict | null
     }
   | { type: 'agent.error'; taskId: string; message: string; stage: string }
+  | { type: 'analysis.cloning'; jobId: string; url: string }
   | { type: 'analysis.progress'; jobId: string; done: number; total: number }
   | { type: 'analysis.done'; jobId: string; projectId: string }
   | { type: 'analysis.error'; jobId: string; message: string }

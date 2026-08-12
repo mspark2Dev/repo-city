@@ -4,6 +4,12 @@
 
 Two things are worth knowing before you point it at a repository.
 
+**It clones what you point it at.** A git URL is cloned into
+`~/.local/share/repocity/clones/`. Only https, http, ssh, git and scp-style remotes are
+accepted; transport helpers such as `ext::`, which git treats as a command to run, are
+refused, as is any value beginning with `-`. git is invoked with an argument list and never
+a shell, with prompting disabled so a private repository fails instead of hanging.
+
 **It reads whatever path you give it.** The analyzer walks that directory and reads every
 file it can parse. The backend binds to loopback by default for exactly this reason — do
 not expose it on a network interface.

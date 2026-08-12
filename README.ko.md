@@ -71,7 +71,19 @@ cd services/analyzer && uv sync && uv run uvicorn repocity.app:app --port 8787
 pnpm dev            # http://localhost:5173
 ```
 
-좌측 상단 입력창에 분석할 로컬 리포지토리 경로를 넣는다. UI 없이 쓰려면:
+좌측 상단 입력창은 **로컬 경로와 git URL 을 모두** 받는다:
+
+```
+/path/to/your/project
+https://github.com/owner/repo.git
+git@gitlab.example.com:group/repo.git
+```
+
+원격 리포지토리는 `~/.local/share/repocity/clones/` 에 shallow clone 된다. 이미 클론된 것이
+있으면 다시 받지 않고 재사용하므로, 거기에 적용한 변경이 날아가지 않는다. 비공개 리포는 git 이
+이미 가진 자격증명을 쓰며, repoCity 가 별도로 묻지 않는다.
+
+UI 없이 쓰려면:
 
 ```bash
 cd services/analyzer

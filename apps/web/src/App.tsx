@@ -5,20 +5,26 @@ import { CityCanvas } from './scene/CityCanvas'
 import { useCityStore } from './store'
 
 const DEFAULT_PATH = '../../fixtures/sample-project'
+const PLACEHOLDER = 'a local path, or https://github.com/owner/repo.git'
 
 function Progress() {
   const status = useCityStore((s) => s.status)
   const progress = useCityStore((s) => s.progress)
+  const cloning = useCityStore((s) => s.cloning)
   if (status !== 'loading') return null
 
   const pct = progress && progress.total > 0 ? (progress.done / progress.total) * 100 : 0
   return (
     <div className="progress">
-      <div className="bar">
-        <div className="fill" style={{ width: `${pct}%` }} />
+      <div className={`bar${cloning ? ' indeterminate' : ''}`}>
+        <div className="fill" style={{ width: cloning ? '100%' : `${pct}%` }} />
       </div>
       <span>
-        {progress ? `parsing ${progress.done} / ${progress.total} files` : 'scanning repository…'}
+        {cloning
+          ? `cloning ${cloning}`
+          : progress
+            ? `parsing ${progress.done} / ${progress.total} files`
+            : 'scanning repository…'}
       </span>
     </div>
   )
@@ -43,7 +49,12 @@ export function App() {
             void load(path)
           }}
         >
-          <input value={path} onChange={(e) => setPath(e.target.value)} spellCheck={false} />
+          <input
+            value={path}
+            onChange={(e) => setPath(e.target.value)}
+            placeholder={PLACEHOLDER}
+            spellCheck={false}
+          />
           <button type="submit" disabled={status === 'loading'}>
             {status === 'loading' ? 'analyzing…' : 'analyze'}
           </button>
