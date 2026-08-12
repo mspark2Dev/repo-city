@@ -54,7 +54,7 @@ def _load_ignore_spec(root: Path, extra_excludes: tuple[str, ...]) -> pathspec.P
     gitignore = root / ".gitignore"
     if gitignore.is_file():
         patterns += gitignore.read_text(encoding="utf-8", errors="replace").splitlines()
-    return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+    return pathspec.PathSpec.from_lines("gitignore", patterns)
 
 
 def scan(root: Path, extra_excludes: tuple[str, ...] = ()) -> list[ScannedFile]:
