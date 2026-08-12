@@ -1,0 +1,370 @@
+{
+  "$defs": {
+    "Building": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "districtId": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "lang": {
+          "enum": [
+            "python",
+            "typescript",
+            "javascript",
+            "other"
+          ],
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Point"
+        },
+        "footprint": {
+          "$ref": "#/$defs/Footprint"
+        },
+        "height": {
+          "type": "number"
+        },
+        "metrics": {
+          "$ref": "#/$defs/Metrics"
+        },
+        "grade": {
+          "enum": [
+            "clean",
+            "watch",
+            "hot",
+            "critical"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "districtId",
+        "path",
+        "name",
+        "lang",
+        "position",
+        "footprint",
+        "height",
+        "metrics",
+        "grade"
+      ],
+      "title": "Building",
+      "type": "object"
+    },
+    "District": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "y": {
+          "type": "number"
+        },
+        "fileCount": {
+          "type": "integer"
+        },
+        "loc": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "parentId",
+        "path",
+        "depth",
+        "rect",
+        "y",
+        "fileCount",
+        "loc"
+      ],
+      "title": "District",
+      "type": "object"
+    },
+    "Footprint": {
+      "additionalProperties": false,
+      "properties": {
+        "w": {
+          "type": "number"
+        },
+        "d": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "w",
+        "d"
+      ],
+      "title": "Footprint",
+      "type": "object"
+    },
+    "Link": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "import",
+          "type": "string"
+        },
+        "weight": {
+          "type": "integer"
+        },
+        "bidirectional": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target",
+        "kind",
+        "weight",
+        "bidirectional"
+      ],
+      "title": "Link",
+      "type": "object"
+    },
+    "Metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "loc": {
+          "type": "integer"
+        },
+        "sloc": {
+          "type": "integer"
+        },
+        "comments": {
+          "type": "integer"
+        },
+        "symbols": {
+          "type": "integer"
+        },
+        "functions": {
+          "type": "integer"
+        },
+        "classes": {
+          "type": "integer"
+        },
+        "maxCC": {
+          "type": "integer"
+        },
+        "avgCC": {
+          "type": "number"
+        },
+        "ccDensity": {
+          "type": "number"
+        },
+        "fanIn": {
+          "type": "integer"
+        },
+        "fanOut": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "loc",
+        "sloc",
+        "comments",
+        "symbols",
+        "functions",
+        "classes",
+        "maxCC",
+        "avgCC",
+        "ccDensity",
+        "fanIn",
+        "fanOut"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "Point": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "z"
+      ],
+      "title": "Point",
+      "type": "object"
+    },
+    "Rect": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "w": {
+          "type": "number"
+        },
+        "d": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "z",
+        "w",
+        "d"
+      ],
+      "title": "Rect",
+      "type": "object"
+    },
+    "Stats": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "integer"
+        },
+        "loc": {
+          "type": "integer"
+        },
+        "links": {
+          "type": "integer"
+        },
+        "unresolved": {
+          "type": "integer"
+        },
+        "durationMs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "files",
+        "loc",
+        "links",
+        "unresolved",
+        "durationMs"
+      ],
+      "title": "Stats",
+      "type": "object"
+    },
+    "Unresolved": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "spec": {
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "external",
+            "not_found",
+            "unsupported"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "spec",
+        "reason"
+      ],
+      "title": "Unresolved",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "default": "1.0",
+      "type": "string"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "root": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "stats": {
+      "$ref": "#/$defs/Stats"
+    },
+    "districts": {
+      "items": {
+        "$ref": "#/$defs/District"
+      },
+      "type": "array"
+    },
+    "buildings": {
+      "items": {
+        "$ref": "#/$defs/Building"
+      },
+      "type": "array"
+    },
+    "unresolved": {
+      "items": {
+        "$ref": "#/$defs/Unresolved"
+      },
+      "type": "array"
+    },
+    "links": {
+      "items": {
+        "$ref": "#/$defs/Link"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "projectId",
+    "root",
+    "generatedAt",
+    "stats",
+    "districts",
+    "buildings",
+    "unresolved",
+    "links"
+  ],
+  "title": "CityMap",
+  "type": "object"
+}

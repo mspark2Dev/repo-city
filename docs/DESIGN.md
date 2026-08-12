@@ -1,4 +1,4 @@
-# epoCity — 설계 문서 (v0.1)
+# repoCity — 설계 문서 (v0.1)
 
 > 최초 아이디어 스케치를 구현 가능한 규격으로 확정한 문서다.
 > 스케치와 달라진 결정은 각 절의 **[결정]** 항목에 근거와 함께 적는다.
@@ -39,7 +39,7 @@
 ### [결정 1] 추론은 OpenAI 호환 엔드포인트로 추상화한다 (기준 배포 실측 완료)
 
 최초 스케치는 "로컬 Qwen 30B / vLLM"이었으나, vLLM 은 macOS(Apple Silicon) 서빙을 지원하지
-않으므로 개발 머신에 따라 성립하지 않는다. epoCity 는 특정 런타임에 묶이지 않고
+않으므로 개발 머신에 따라 성립하지 않는다. repoCity 는 특정 런타임에 묶이지 않고
 **OpenAI 호환 `/v1/chat/completions` 를 말하는 아무 엔드포인트**(vLLM, Ollama, LM Studio)를
 받는다. 주소는 `.env` 로만 주입하고 커밋하지 않는다.
 
@@ -91,13 +91,13 @@ LLM_CONTEXT_BUDGET=60000   # 프롬프트에 실제로 채울 상한
 사용자 소스코드를 LLM 이 무단으로 덮어쓰는 것은 되돌리기 어려운 파괴적 동작이다.
 `POST /agent/refactor` 는 **unified diff 를 만들어 반환만** 하고, 실제 파일 쓰기는
 사용자가 Monaco diff 뷰에서 확인한 뒤 `POST /agent/apply` 를 호출해야 일어난다.
-적용 전 원본은 `.epocity/snapshots/<taskId>/` 에 보관되어 1-클릭 롤백이 가능하다.
+적용 전 원본은 `.repocity/snapshots/<taskId>/` 에 보관되어 1-클릭 롤백이 가능하다.
 
 ---
 
 ## 2. 데이터 모델 — `CityMap.json`
 
-단일 진실 공급원은 **Pydantic 모델**(`services/analyzer/epocity/schema.py`)이다.
+단일 진실 공급원은 **Pydantic 모델**(`services/analyzer/repocity/schema.py`)이다.
 거기서 JSON Schema 를 export 하고 `json-schema-to-typescript` 로 프론트 타입을 생성한다.
 스키마가 갈라지는 사고를 구조적으로 막기 위함이다. (`pnpm gen:types`)
 
@@ -158,15 +158,19 @@ ID 는 **배열 인덱스가 아니라 레포 상대경로**다. 리팩토링 �
 
 | 시각 요소 | 소스 메트릭 | 매핑 식 |
 |---|---|---|
-| 건물 높이 | LOC | `h = 1.5 + 20 * log1p(loc) / log1p(p95_loc)`, 상한 28 |
+| 건물 높이 | LOC | `h = 0.5 + 11.5 * log1p(loc) / log1p(max(p95_loc, 400))`, 상한 12 |
 | 건물 바닥 | symbols(함수+클래스 수) | `w = d = clamp(1.2 + 0.25*sqrt(symbols), 1.2, 6)` |
 | 건물 색/재질 | `maxCC` (파일 내 최대 순환 복잡도) | 아래 등급표 |
 | 구역 타일 | 디렉토리 | squarified treemap, `y = depth * 0.4` |
 | 연결선 | import | 3차 베지어, 굵기 `1 + log2(weight)` |
 
 **[결정 3] 높이는 LOC 에 선형이 아니라 로그다.** 선형이면 5000줄짜리 파일 하나가 화면을
-독점해 나머지 도시가 보이지 않는다. 로그 + p95 정규화로 "거대한 마천루" 느낌은 유지하되
-스케일이 붕괴하지 않게 한다.
+독점해 나머지 도시가 보이지 않는다. 로그 정규화로 "거대한 마천루" 느낌은 유지하되 스케일이
+붕괴하지 않게 한다.
+
+정규화 기준은 p95 만이 아니라 `max(p95, 400)` 이다 (Phase 1 실측 후 수정). p95 만 쓰면 작고
+균일한 프로젝트에서 모든 파일이 최대 높이에 붙어 스카이라인이 정보를 잃는다. 절대 기준을
+섞으면 서로 다른 리포 사이에서도 높이를 비교할 수 있다는 이점이 따라온다.
 
 **[결정 4] 복잡도는 평균이 아니라 파일 내 최대 CC 를 쓴다.** 400줄 중 1개 함수만 CC 40 인
 파일이 진짜 위험한 파일이고, 평균을 쓰면 이게 희석돼 사라진다.
@@ -196,7 +200,16 @@ ID 는 **배열 인덱스가 아니라 레포 상대경로**다. 리팩토링 �
 1. 파일 스캔 → 디렉토리 트리 구축 (`.gitignore` + 기본 제외 목록 적용)
 2. 리프에서 위로 올라가며 각 디렉토리 **요구 면적** = Σ(자식 면적) × 1.25(여유분) + padding
 3. 루트부터 **squarified treemap** 으로 XZ 사각형 분할 → district `rect`
-4. 리프 district 내부: 건물들을 **파일명 사전순 고정 배치**(squarified)
+4. district 내부는 **자기 파일 밴드**와 **하위 디렉토리 밴드**로 먼저 쪼갠 뒤 각각 squarify
+5. 두 밴드 모두 **파일명 사전순 고정 배치**
+
+**[결정 6-a] 파일과 하위 디렉토리를 같은 treemap 에서 경쟁시키지 않는다.** (Phase 1 실측 후 추가)
+루트에 거대한 서브트리 하나와 `README.md` 가 같이 있으면, 면적 비례 분할은 README 에게 폭 0.13
+짜리 조각을 준다. 파일을 별도 밴드로 분리하고, 그 밴드 두께가 최소한 가장 넓은 건물보다
+`BAND_CLEARANCE` 배 두껍도록 구역을 키운다. 늘어난 면적은 하위 디렉토리의 slack 이 흡수한다.
+
+구역 면적은 `(sqrt(자식 면적 합 × 1.25) + 2 × padding)²` 이다. padding 을 면적에 `padding²` 만
+더하면 실제 inset 이 깎는 양(`2p(w+d) - 4p²`)에 못 미쳐, 중첩될수록 건물이 조각으로 눌린다.
 
 **[결정 6] 건물 배치 순서는 크기순이 아니라 이름순이다.** 크기순 정렬이 패킹은 예쁘지만,
 LOC 가 10줄 바뀌는 순간 도시 전체가 재배열된다. 그러면 "리팩토링 전후 비교"라는 이 도구의
@@ -213,14 +226,15 @@ LOC 가 10줄 바뀌는 순간 도시 전체가 재배열된다. 그러면 "리�
 - **LOC:** 전체 라인 / `sloc`(주석·공백 제외) / 주석 라인 분리 집계
 - **순환 복잡도:** AST 질의로 분기 노드 카운트 → `CC = 1 + Σ(분기)`
   분기 노드: `if/elif`, `for`, `while`, `case`, `catch/except`, `&&`, `||`, `??`, 삼항, `assert`
-  언어별 노드 타입 매핑은 `metrics/cc_rules.yaml` 로 외부화 (언어 추가가 코드 수정 없이 가능)
+  언어별 노드 타입 매핑은 `metrics/cc_rules.json` 으로 외부화 (언어 추가가 코드 수정 없이 가능).
+  `"binary_expression:&&"` 처럼 연산자까지 지정 가능
 - **import 해석:**
   - Python: 상대 import 는 패키지 경로 기준, 절대 import 는 프로젝트 루트/`src` 루트 후보로 탐색
   - TS/JS: 상대경로 + `tsconfig.json` 의 `paths`/`baseUrl` 별칭 해석, 확장자 후보 순회
   - 해석 실패 = 외부 패키지로 간주 → `unresolved` 에 기록하고 **링크는 만들지 않는다**
   - `unresolved` 비율은 stats 에 노출한다. 이 수치가 곧 그래프 신뢰도이므로 숨기지 않는다.
 - **성능:** 파일 단위 `ProcessPoolExecutor` 병렬 파싱. 목표 — 1000 파일 / 10초 이내
-- **캐시:** `.epocity/cache/<sha1(path)>.json` 에 `mtime+size` 키로 파일별 분석 결과 저장.
+- **캐시:** `.repocity/cache/<sha1(path)>.json` 에 `mtime+size` 키로 파일별 분석 결과 저장.
   재분석 시 변경 파일만 다시 판다 (Phase 4 의 즉시 반영을 가능하게 하는 부분)
 
 ---
@@ -235,10 +249,10 @@ LOC 가 10줄 바뀌는 순간 도시 전체가 재배열된다. 그러면 "리�
 | POST | `/api/v1/analyze` | `{path, include?, exclude?, force?}` | `202 {jobId, projectId}` |
 | GET | `/api/v1/analyze/{jobId}` | – | `{status, progress, filesDone, filesTotal, error?}` |
 | GET | `/api/v1/projects/{projectId}/citymap` | – | `CityMap.json` |
-| GET | `/api/v1/metrics/{node_id}` | – | `{metrics, source, symbols[], imports[], importedBy[]}` |
+| GET | `/api/v1/projects/{projectId}/metrics/{node_id}` | – | `{metrics, source, imports[], importedBy[]}` |
 
-node id 는 `f:src/core/parser.py` 처럼 슬래시를 포함하므로 path 파라미터에는 **URL 인코딩**해서
-넣는다 (`f%3Asrc%2Fcore%2Fparser.py`). 서버는 FastAPI `:path` 컨버터로 비인코딩 요청도 허용한다.
+node id 는 `f:src/core/parser.py` 처럼 슬래시를 포함한다. FastAPI `:path` 컨버터를 써서 인코딩
+없이 그대로 받는다. 메트릭 조회는 어느 프로젝트의 노드인지 알아야 하므로 프로젝트 하위 경로다.
 | POST | `/api/v1/agent/refactor` | `{nodeId, instruction, mode?}` | `202 {taskId}` |
 | GET | `/api/v1/agent/tasks/{taskId}` | – | `{status, diff?, explanation?, error?}` |
 | POST | `/api/v1/agent/apply` | `{taskId}` | `{applied:[paths], snapshotId, delta}` |

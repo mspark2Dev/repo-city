@@ -1,0 +1,63 @@
+{
+  "_comment": "Node types that add a branch to cyclomatic complexity, per grammar. Adding a language means adding an entry here, not changing code.",
+  "python": {
+    "function": ["function_definition"],
+    "branch": [
+      "if_statement",
+      "elif_clause",
+      "for_statement",
+      "while_statement",
+      "except_clause",
+      "case_clause",
+      "assert_statement",
+      "conditional_expression",
+      "boolean_operator",
+      "comprehension_clause",
+      "if_clause"
+    ]
+  },
+  "tsx": {
+    "function": [
+      "function_declaration",
+      "function_expression",
+      "method_definition",
+      "arrow_function",
+      "generator_function_declaration"
+    ],
+    "branch": [
+      "if_statement",
+      "for_statement",
+      "for_in_statement",
+      "while_statement",
+      "do_statement",
+      "catch_clause",
+      "switch_case",
+      "ternary_expression",
+      "binary_expression:&&",
+      "binary_expression:||",
+      "binary_expression:??"
+    ]
+  },
+  "javascript": {
+    "function": [
+      "function_declaration",
+      "function_expression",
+      "method_definition",
+      "arrow_function",
+      "generator_function_declaration"
+    ],
+    "branch": [
+      "if_statement",
+      "for_statement",
+      "for_in_statement",
+      "while_statement",
+      "do_statement",
+      "catch_clause",
+      "switch_case",
+      "ternary_expression",
+      "binary_expression:&&",
+      "binary_expression:||",
+      "binary_expression:??"
+    ]
+  }
+}

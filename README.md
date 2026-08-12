@@ -1,14 +1,14 @@
-# epoCity
+# repoCity
 
 Turn a codebase into a city you can fly through — then send an agent to clean up the bad neighborhoods.
 
-epoCity statically analyzes a repository, renders it as a 3D city where every building is a file,
+repoCity statically analyzes a repository, renders it as a 3D city where every building is a file,
 and lets you point a local LLM at the ugly parts to propose refactorings. Buildings grow with lines
 of code and rust over with cyclomatic complexity, so the parts of your codebase that need attention
 are the ones you notice first.
 
-> **Status: pre-alpha.** The design is settled and Phase 1 is being built. There is nothing to run
-> yet. Watch [docs/ROADMAP.md](docs/ROADMAP.md) for what lands when.
+> **Status: pre-alpha.** Phase 1 is done — you can analyze a repository and fly through it. The
+> refactoring agent (Phase 3) is not built yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## The idea
 
@@ -47,6 +47,29 @@ Design decisions and their rationale live in [docs/DESIGN.md](docs/DESIGN.md) (K
 The agent never writes to your files on its own. It produces a unified diff, verifies the result
 still parses, and shows it to you. Files are only written when you explicitly apply the change, and
 the originals are snapshotted so you can revert.
+
+## Getting started
+
+```bash
+pnpm install
+
+# Terminal 1 — analyzer
+cd services/analyzer && uv sync && uv run uvicorn repocity.app:app --port 8787
+
+# Terminal 2 — web
+pnpm dev            # http://localhost:5173
+```
+
+Enter any local repository path in the field at the top left. To analyze without the UI:
+
+```bash
+cd services/analyzer
+uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
+```
+
+`fixtures/sample-project` is a small Python project with a circular dependency and one
+very high complexity function deliberately planted in it, so you can see what those look
+like in the city before pointing repoCity at your own code.
 
 ## Requirements
 

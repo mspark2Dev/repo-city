@@ -1,6 +1,6 @@
 # Contributing
 
-epoCity is pre-alpha and the architecture is still moving. Before starting non-trivial work, open an
+repoCity is pre-alpha and the architecture is still moving. Before starting non-trivial work, open an
 issue so we can agree on the approach — see [docs/DESIGN.md](docs/DESIGN.md) for the decisions
 already made and their rationale.
 
@@ -46,8 +46,10 @@ One commit does one thing. Do not add `Co-Authored-By` trailers.
 docstrings for self-evident functions. Non-obvious algorithms (`layout.py`, `imports/`) and public
 API surfaces should carry their intent and constraints.
 
-**Schema** — `services/analyzer/epocity/schema.py` is the single source of truth for `CityMap`.
-TypeScript types are generated from it (`pnpm gen:types`); never edit the generated file by hand.
+**Schema** — `services/analyzer/repocity/schema.py` is the single source of truth for `CityMap`.
+`citymap.schema.json` and `src/api/types.gen.ts` are generated from it with `pnpm gen:types` and
+committed, so building the web app does not require the Python toolchain. Never edit them by hand;
+change `schema.py` and regenerate.
 
 ## Pull requests
 

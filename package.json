@@ -1,0 +1,11 @@
+{
+  "name": "repo-city",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "typecheck": "pnpm --filter web exec tsc -b --noEmit",
+    "gen:types": "cd services/analyzer && uv run python scripts/export_schema.py ../../apps/web/citymap.schema.json && cd ../.. && pnpm --filter web gen:types"
+  }
+}

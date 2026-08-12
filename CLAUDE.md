@@ -1,4 +1,4 @@
-# epoCity — 프로젝트 규칙
+# repoCity — 프로젝트 규칙
 
 ## 라이선스 · 공개
 MIT 라이선스 공개 오픈소스다. 커밋 히스토리, 코드, 문서가 모두 외부에 노출된다는 전제로 작업한다.
@@ -24,9 +24,9 @@ MIT 라이선스 공개 오픈소스다. 커밋 히스토리, 코드, 문서가 
 ## 코드
 - 주석은 **왜**를 설명할 때만 쓴다. 코드가 이미 말하는 것을 반복하지 않는다.
 - 자명한 함수에 docstring 을 채우려고 문장을 지어내지 않는다.
-- 공개 API(`epocity/api/`, `schema.py`)와 비자명한 알고리즘(`layout.py`, `imports/`)에는
+- 공개 API(`repocity/api/`, `schema.py`)와 비자명한 알고리즘(`layout.py`, `imports/`)에는
   의도와 제약을 남긴다.
 - Python: 타입 힌트 필수, `ruff` + `ruff format`.
 - TypeScript: `strict: true`, `any` 금지.
-- CityMap 스키마의 단일 진실 공급원은 `services/analyzer/epocity/schema.py` 다.
+- CityMap 스키마의 단일 진실 공급원은 `services/analyzer/repocity/schema.py` 다.
   TS 타입은 생성물이므로 손으로 고치지 않는다.

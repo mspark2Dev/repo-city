@@ -17,7 +17,7 @@ something about it without leaving. So the same surface that shows you the probl
 to an agent, review the diff, and watch the city change.
 
 This idea is not new — [CodeCity](https://wettel.github.io/codecity.html) (Wettel & Lanza, 2007)
-established the city metaphor for software visualization. epoCity differs in two ways: it targets
+established the city metaphor for software visualization. repoCity differs in two ways: it targets
 modern polyglot repositories through tree-sitter, and it closes the loop by wiring an LLM agent into
 the visualization so that inspection and modification are the same workflow.
 

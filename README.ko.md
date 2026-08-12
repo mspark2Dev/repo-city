@@ -1,13 +1,13 @@
-# epoCity
+# repoCity
 
 코드베이스를 날아다닐 수 있는 도시로 바꾸고, 망가진 구역에 에이전트를 보내 정리시키는 도구.
 
-epoCity 는 리포지토리를 정적 분석해 3D 도시로 렌더링한다. 건물 하나가 파일 하나이고, 코드 라인 수만큼
+repoCity 는 리포지토리를 정적 분석해 3D 도시로 렌더링한다. 건물 하나가 파일 하나이고, 코드 라인 수만큼
 높아지며, 순환 복잡도가 높을수록 녹슬고 붉게 빛난다. 손봐야 할 코드가 가장 먼저 눈에 들어오게 만드는 것이
 목적이다. 거기에 로컬 LLM 을 붙여 리팩토링을 제안받는다.
 
-> **상태: pre-alpha.** 설계는 확정됐고 Phase 1 을 구현 중이다. 아직 실행할 수 있는 것은 없다.
-> 진행 상황은 [docs/ROADMAP.md](docs/ROADMAP.md) 참고.
+> **상태: pre-alpha.** Phase 1 완료 — 리포지토리를 분석해 도시를 날아다닐 수 있다. 리팩토링
+> 에이전트(Phase 3)는 아직 없다. 진행 상황은 [docs/ROADMAP.md](docs/ROADMAP.md) 참고.
 
 ## 아이디어
 
@@ -43,6 +43,29 @@ LLM                 OpenAI 호환 엔드포인트 (vLLM, Ollama, LM Studio)
 
 에이전트는 파일을 직접 쓰지 않는다. unified diff 를 만들고, 결과가 문법적으로 파싱되는지 검증한 뒤
 사용자에게 보여준다. 명시적으로 적용해야만 파일이 쓰이고, 원본은 스냅샷으로 남아 되돌릴 수 있다.
+
+## 시작하기
+
+```bash
+pnpm install
+
+# 터미널 1 — 분석기
+cd services/analyzer && uv sync && uv run uvicorn repocity.app:app --port 8787
+
+# 터미널 2 — 웹
+pnpm dev            # http://localhost:5173
+```
+
+좌측 상단 입력창에 분석할 로컬 리포지토리 경로를 넣는다. UI 없이 쓰려면:
+
+```bash
+cd services/analyzer
+uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
+```
+
+`fixtures/sample-project` 는 순환 의존 한 쌍과 복잡도가 아주 높은 함수 하나를 일부러 심어둔
+작은 파이썬 프로젝트다. 자기 코드에 들이대기 전에 그런 것들이 도시에서 어떻게 보이는지
+확인할 수 있다.
 
 ## 요구사항
 

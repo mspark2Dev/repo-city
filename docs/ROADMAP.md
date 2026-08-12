@@ -1,4 +1,4 @@
-# epoCity — 구현 계획 (v0.1)
+# repoCity — 구현 계획 (v0.1)
 
 `docs/DESIGN.md` 의 설계를 실행 순서로 편 것. 각 Phase 는 **그 자체로 돌아가는 산출물**과
 **검증 가능한 수용 기준**을 갖는다. 기준을 못 채우면 다음 Phase 로 넘어가지 않는다.
@@ -9,7 +9,7 @@
 repo-city/
 ├─ apps/web/                  # Vite + React 19 + TS + R3F
 ├─ services/analyzer/         # Python 3.12 + FastAPI (uv 관리)
-│   ├─ epocity/
+│   ├─ repocity/
 │   │   ├─ scan.py            # 파일 워커 + ignore
 │   │   ├─ parse.py           # tree-sitter 래퍼
 │   │   ├─ metrics/           # loc.py, complexity.py, cc_rules.yaml
@@ -22,7 +22,7 @@ repo-city/
 │   └─ tests/
 ├─ fixtures/                  # 분석 대상 더미 프로젝트 (파이썬 30~50 파일)
 ├─ docs/                      # DESIGN.md, ROADMAP.md
-└─ .epocity/                  # 런타임 산출물(cache, snapshots) — gitignore
+└─ .repocity/                  # 런타임 산출물(cache, snapshots) — gitignore
 ```
 
 ## 기술 스택 (확정)
@@ -41,22 +41,39 @@ repo-city/
 
 ---
 
-## Phase 1 — Data & Mock 3D
+## Phase 1 — Data & Mock 3D ✅ 완료
 **목표: 더미 프로젝트가 상자와 선으로 화면에 뜬다.**
 
 1. 모노레포 스캐폴딩 (`pnpm workspace`, `uv init`), `.gitignore`, `.env.example`
 2. `fixtures/` 에 더미 파이썬 프로젝트 생성 (30~50 파일, 의도적 순환 의존 1쌍 + CC 30 짜리 함수 1개 포함)
 3. `schema.py` 로 CityMap 모델 정의 → `scripts/gen-types` 로 TS 타입 생성 파이프라인 연결
 4. `scan → parse → metrics(LOC만) → layout(treemap)` 파이프라인, CLI 진입점
-   `uv run epocity analyze ./fixtures -o citymap.json`
+   `uv run repocity analyze ./fixtures -o citymap.json`
 5. `GET /api/v1/projects/{id}/citymap` + `POST /api/v1/analyze`(동기 처리로 시작)
 6. R3F 캔버스: district 평면 + 건물 박스(높이=LOC) + 직선 링크, OrbitControls
 
-**수용 기준**
-- [ ] `citymap.json` 이 스키마 검증을 통과하고 fixtures 의 파일 수와 일치
-- [ ] 같은 입력 두 번 분석 → **바이트 동일한 JSON** (레이아웃 결정성 증명)
-- [ ] 브라우저에서 도시가 뜨고 궤도 회전/줌이 동작
-- [ ] 건물 클릭 → 콘솔에 building id 출력 (피킹 경로 확보)
+**수용 기준 (전부 충족)**
+- [x] `citymap.json` 이 스키마 검증을 통과하고 fixtures 의 파일 수(29)와 일치
+- [x] 같은 입력 두 번 분석 → 바이트 동일한 JSON (`test_serialized_bytes_are_stable`)
+- [x] 브라우저에서 도시가 뜨고 궤도 회전/줌이 동작
+- [x] 건물 클릭 → Inspector 에 메트릭·의존성·원본 코드 표시 (콘솔 출력에서 상향)
+
+**Phase 1 실측**
+
+| 항목 | 목표 | 실측 |
+|---|---|---|
+| 분석 처리량 | 1000 파일 ≤ 10s | **1034 파일 3.27s** (316 files/s) |
+| 프레임레이트 | 3000 건물 ≥ 55fps | **1034 건물 60fps** (소프트웨어 GL 기준, 상한값) |
+| 불변식 테스트 | – | 15개 통과 (결정성·비겹침·구역 포함·ID 안정성) |
+
+**Phase 2 로 앞당겨 처리한 것**
+- 순환 복잡도(CC) 계산. `maxCC: 0` 을 내보내는 것은 데이터가 없는 게 아니라 **틀린 값**을
+  내보내는 것이므로 미루지 않았다.
+- import 해석기(Python 상대·절대). Phase 1 의 연결선 렌더링에 필요했다.
+- Inspector 패널과 `GET /metrics/{node_id}`.
+
+**남은 Phase 2 작업**: TS/JS `tsconfig paths` 해석, 재질/셰이더(유리→녹슨 콘크리트),
+파티클, bloom, Monaco 뷰, 파일 캐시.
 
 ---
 

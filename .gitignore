@@ -1,5 +1,5 @@
 # Runtime artifacts
-.epocity/
+.repocity/
 *.log
 
 # Python
@@ -16,9 +16,6 @@ node_modules/
 dist/
 .vite/
 *.tsbuildinfo
-
-# Generated
-apps/web/src/api/types.gen.ts
 
 # Env
 .env
