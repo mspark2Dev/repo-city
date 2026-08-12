@@ -1,10 +1,15 @@
 # repoCity
 
+[![CI](https://github.com/mspark2Dev/repo-city/actions/workflows/ci.yml/badge.svg)](https://github.com/mspark2Dev/repo-city/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 코드베이스를 날아다닐 수 있는 도시로 바꾸고, 망가진 구역에 에이전트를 보내 정리시키는 도구.
 
 repoCity 는 리포지토리를 정적 분석해 3D 도시로 렌더링한다. 건물 하나가 파일 하나이고, 코드 라인 수만큼
 높아지며, 순환 복잡도가 높을수록 녹슬고 붉게 빛난다. 손봐야 할 코드가 가장 먼저 눈에 들어오게 만드는 것이
 목적이다. 거기에 로컬 LLM 을 붙여 리팩토링을 제안받는다.
+
+![파이썬 의존성 트리를 도시로 렌더링한 모습](docs/images/city.png)
 
 > **상태: pre-alpha 이지만 전 과정이 동작한다.** 리포지토리를 분석해 도시를 날아다니고, 파일을
 > 에이전트에 넘기고, diff 를 검토해 적용하면 그 건물이 무너지고 다시 솟아오른다.
@@ -22,9 +27,18 @@ repoCity 는 리포지토리를 정적 분석해 3D 도시로 렌더링한다. �
 | 건물 사이를 잇는 빛나는 곡선 | import |
 | 굵고 붉게 얽힌 선 | 순환 의존 |
 
-건물을 클릭하면 메트릭과 원본 코드가 열린다. 하단 커맨드바에 *"이 파일에서 가장 복잡한 함수를 쪼개줘"*
-같은 명령을 넣으면, 에이전트가 해당 파일과 직접 의존 코드를 읽고 diff 를 제안한다. 적용을 누르면 그 건물이
-무너지고 리팩토링 결과대로 다시 솟아오른다.
+건물을 클릭하면 메트릭과 원본 코드가 열린다.
+
+![복잡도가 높은 파일을 들여다보는 화면](docs/images/inspect.png)
+
+하단 커맨드바에 *"이 파일에서 가장 복잡한 함수를 쪼개줘"* 같은 명령을 넣으면, 에이전트가 해당 파일과
+직접 의존 코드를 읽고 diff 를 제안한다.
+
+![에이전트가 제안한 리팩토링 diff](docs/images/agent.png)
+
+적용을 누르면 그 건물이 무너지고 리팩토링 결과대로 다시 솟아오르며, 전후 수치를 나란히 보여준다.
+
+![변경 후 도시와 전후 비교표](docs/images/after.png)
 
 ## 구조
 
@@ -95,6 +109,11 @@ LLM_CONTEXT_BUDGET=60000
 | [docs/DESIGN.md](docs/DESIGN.md) | 스키마, API, 시각 매핑 룰 |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phase 별 계획과 수용 기준 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 개발 환경 세팅과 규약 (영문) |
+
+## 보안
+
+repoCity 는 지정한 디렉토리를 읽고, 에이전트를 쓰면 대상 파일을 설정된 모델 엔드포인트로 보낸다.
+그 의미와 취약점 신고 방법은 [SECURITY.md](SECURITY.md) 참고. (영문)
 
 ## 라이선스
 

@@ -1,11 +1,16 @@
 # repoCity
 
+[![CI](https://github.com/mspark2Dev/repo-city/actions/workflows/ci.yml/badge.svg)](https://github.com/mspark2Dev/repo-city/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Turn a codebase into a city you can fly through — then send an agent to clean up the bad neighborhoods.
 
 repoCity statically analyzes a repository, renders it as a 3D city where every building is a file,
 and lets you point a local LLM at the ugly parts to propose refactorings. Buildings grow with lines
 of code and rust over with cyclomatic complexity, so the parts of your codebase that need attention
 are the ones you notice first.
+
+![A Python dependency tree rendered as a city](docs/images/city.png)
 
 > **Status: pre-alpha but complete end to end.** Analyze a repository, fly through it, hand a
 > file to the agent, review the diff, apply it, and watch that building rebuild itself.
@@ -23,10 +28,19 @@ are the ones you notice first.
 | Glowing arcs between buildings | Imports |
 | A thick red tangle | A circular dependency |
 
-Click a building to inspect its metrics and source. Type a command — *"split the most complex
-function in this file"* — and an agent reads the file plus its direct dependencies, proposes a diff,
-and shows it to you. Accept it, and the building collapses and rebuilds itself into whatever the
-refactoring produced.
+Click a building to inspect its metrics and source.
+
+![Inspecting a file with high cyclomatic complexity](docs/images/inspect.png)
+
+Then type a command — *"split the most complex function in this file"* — and an agent reads the
+file plus its direct dependencies, proposes a diff, and shows it to you.
+
+![The agent's proposed refactoring, shown as a diff](docs/images/agent.png)
+
+Accept it, and the building rebuilds itself into whatever the refactoring produced, with the
+before and after side by side.
+
+![The city after the change, with a before/after comparison](docs/images/after.png)
 
 ## How it works
 
@@ -103,6 +117,12 @@ your repository, and Revert restores them byte for byte.
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup and conventions |
 
 한국어 안내는 [README.ko.md](README.ko.md) 를 참고하세요.
+
+## Security
+
+repoCity reads the directory you point it at and, when you use the agent, sends the file
+being refactored to your configured model endpoint. See [SECURITY.md](SECURITY.md) for what
+that means and how to report a vulnerability.
 
 ## License
 
