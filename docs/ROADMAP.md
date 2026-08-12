@@ -34,6 +34,7 @@ repo-city/
 | 에디터 | @monaco-editor/react (`DiffEditor` 포함) | diff 검토가 워크플로의 핵심 |
 | 스타일 | Tailwind | HUD 위주라 디자인 시스템까진 불필요 |
 | 백엔드 | Python 3.12(uv), FastAPI, uvicorn, Pydantic v2 | 시스템 파이썬 3.9 는 사용하지 않는다 |
+| 복잡도 | `lizard` | 27개 언어. 직접 구현과 400파일 비교 시 399개 일치 → 유지보수를 남에게 맡긴다 (설계 결정 11) |
 | 파싱 | tree-sitter + tree-sitter-language-pack | 언어별 빌드 없이 다국어 |
 | 잡 큐 | asyncio + in-process 워커 | 로컬 단일 사용자에 Celery/Redis 는 과잉 |
 | LLM | vLLM `Qwen3.6-27B` (OpenAI 호환, 주소는 `.env`) | 실측 완료 — 120k ctx, APC, json_schema, tool_calls 전부 지원 |

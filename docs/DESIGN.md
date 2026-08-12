@@ -291,28 +291,30 @@ ref 마다 별도 체크아웃을 둔다. 브랜치를 오가며 서로의 작�
 ## 5. 정적 분석 파이프라인
 
 - **파서:** `tree-sitter` + `tree-sitter-language-pack` (언어별 빌드 불필요)
-- **지원 언어:** 두 단계로 나뉜다. 언어별 비용이 다르기 때문이다 — 메트릭은 문법만 있으면
-  되지만, 의존 그래프는 언어마다 모듈 해석 규칙을 따로 구현해야 한다.
+- **지원 언어:** 두 단계로 나뉜다. 복잡도는 `lizard` 가 읽는 27개 언어 전부에서 나오고,
+  의존 그래프는 모듈 해석 규칙을 구현한 언어에서만 나온다.
 
   | 단계 | 언어 | 얻는 것 |
   |---|---|---|
   | 전체 | Python, TypeScript/TSX, JavaScript, Java, Kotlin, C, C++ | 크기·복잡도·심볼 + **의존 그래프** |
-  | 메트릭 | Go, Rust, C#, Ruby, PHP, Swift, Scala | 크기·복잡도·심볼 |
+  | 메트릭 | Go, Rust, C#, Ruby, PHP, Swift, Scala, Objective-C, Lua, Perl, R, Erlang, Fortran, Solidity, Zig, Vue, GDScript, PL/SQL, Smalltalk, TTCN | 크기·복잡도·함수 목록 |
   | LOC 만 | 그 외 텍스트 파일 | 라인 수 (`lang: "other"`, 회색 건물) |
 
-  의존 해석 방식: Python 상대·절대 import / TS·JS `tsconfig` 별칭 / Java·Kotlin 은 정규화된
-  클래스명을 경로 접미사로 매칭 / C·C++ 는 따옴표 `#include` 를 상대·include 루트 기준으로 매칭.
+- **순환 복잡도:** [`lizard`](https://github.com/terryyin/lizard) 가 측정한다.
+  파일 단위 max/avg 뿐 아니라 **함수 단위**(이름·CC·시작 줄·길이)로 나온다.
 
-  **[결정 11] 문법 노드 이름은 추측하지 않는다.** `cc_rules.json` 이 그 문법에 없는 노드를
-  가리키면 복잡도가 조용히 1 로 나오고, 도시는 균일하게 깨끗해 보인다. 실제로 확인한 이름만
-  넣고, 언어마다 분기가 여럿인 스니펫으로 **CC ≥ 4 를 테스트로 고정**한다 (`test_languages.py`).
-- **LOC:** 전체 라인 / `sloc`(주석·공백 제외) / 주석 라인 분리 집계.
-  Python docstring 은 AST 로 찾아 주석으로 집계한다. `#` 만 세면 잘 문서화된 파이썬 파일이
-  주석 0 으로 나온다
-- **순환 복잡도:** AST 질의로 분기 노드 카운트 → `CC = 1 + Σ(분기)`
-  분기 노드: `if/elif`, `for`, `while`, `case`, `catch/except`, `&&`, `||`, `??`, 삼항, `assert`
-  언어별 노드 타입 매핑은 `metrics/cc_rules.json` 으로 외부화 (언어 추가가 코드 수정 없이 가능).
-  `"binary_expression:&&"` 처럼 연산자까지 지정 가능
+  **[결정 11] 복잡도는 직접 구현하지 않고 lizard 를 쓴다.** 원래는 tree-sitter 위에 문법별
+  분기 노드 목록(`cc_rules.json`)을 손으로 관리했다. 실제 자바 코드 400개 파일로 비교하니
+  **399개가 완전히 일치**했고 직접 구현이 1.8배 빨랐지만, 그 속도 차이는 전체 분석 시간에서
+  0.2초였다. 반대편에 있던 비용은 규칙 파일 211줄과, 문법이 노드 이름을 바꾸면 복잡도가 조용히
+  1 로 나오는 위험, 그리고 언어를 추가할 때마다 반복되는 같은 작업이었다.
+
+  품질이 같다면 남이 유지보수하는 쪽이 낫다. 커버리지는 14개 언어에서 27개로 늘었고, 함수 단위
+  데이터가 딸려왔다. 대가는 분석 시간이다 — 실측 936 파일 기준 1.7s → 4.4s. 목표(1000 파일
+  10초) 안이고 캐시 재분석은 영향이 없다.
+
+  tree-sitter 는 lizard 가 못 하는 일에 남는다: import 추출, 심볼 이름, 에이전트 산출물의 문법 게이트.
+
 - **import 해석:**
   - Python: 상대 import 는 패키지 경로 기준, 절대 import 는 프로젝트 루트/`src` 루트 후보로 탐색
   - TS/JS: 상대경로 + `tsconfig.json`/`jsconfig.json` 의 `paths`/`baseUrl` 별칭 해석,

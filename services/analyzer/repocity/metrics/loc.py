@@ -11,23 +11,19 @@ from dataclasses import dataclass
 
 from ..schema import Lang
 
-_LINE_COMMENT: dict[Lang, tuple[str, ...]] = {
+_LINE_COMMENT: dict[str, tuple[str, ...]] = {
     "python": ("#",),
-    "typescript": ("//",),
-    "javascript": ("//",),
-    "java": ("//",),
-    "go": ("//",),
-    "rust": ("//",),
-    "c": ("//",),
-    "cpp": ("//",),
-    "csharp": ("//",),
-    "kotlin": ("//",),
-    "swift": ("//",),
-    "scala": ("//",),
     "ruby": ("#",),
+    "perl": ("#",),
+    "r": ("#",),
+    "gdscript": ("#",),
+    "erlang": ("%",),
+    "fortran": ("!",),
+    "plsql": ("--",),
+    "smalltalk": ('"',),
     "php": ("//", "#"),
-    "other": ("#", "//"),
 }
+_DEFAULT_COMMENT = ("//",)
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +34,7 @@ class LocCounts:
 
 
 def count_loc(source: str, lang: Lang) -> LocCounts:
-    prefixes = _LINE_COMMENT[lang]
+    prefixes = _LINE_COMMENT.get(lang, _DEFAULT_COMMENT)
     total = 0
     comments = 0
     code = 0

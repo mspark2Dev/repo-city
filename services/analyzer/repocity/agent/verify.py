@@ -9,12 +9,23 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from ..metrics import complexity
+from ..metrics import complexity_of
 from ..parse import _GRAMMAR, is_parsable, parse_source
 from ..schema import Lang
 
 _FENCE = re.compile(r"^\s*```[a-zA-Z0-9+#-]*\n(.*?)\n```\s*$", re.DOTALL)
+
+_SUFFIX: dict[str, str] = {
+    "python": ".py",
+    "typescript": ".ts",
+    "javascript": ".js",
+    "java": ".java",
+    "kotlin": ".kt",
+    "c": ".c",
+    "cpp": ".cpp",
+}
 
 
 @dataclass(slots=True)
@@ -75,22 +86,18 @@ def _symbol_names(source: bytes, lang: Lang) -> set[str]:
     return names
 
 
-def verify(original: str, proposed: str, lang: Lang) -> Verdict:
+def verify(original: str, proposed: str, lang: Lang, path: Path | None = None) -> Verdict:
     before = original.encode()
     after = proposed.encode()
 
     if not is_parsable(after, lang):
         return Verdict(parses=False)
 
-    grammar = _GRAMMAR.get(lang)
-    before_cc = 0
-    after_cc = 0
-    if grammar:
-        from tree_sitter_language_pack import get_parser
-
-        parser = get_parser(grammar)
-        before_cc = complexity(parser.parse(before).root_node, before, grammar).max_cc
-        after_cc = complexity(parser.parse(after).root_node, after, grammar).max_cc
+    # lizard reads the filename to pick a parser, so a real path measures more accurately
+    # than the placeholder; the placeholder keeps the signature usable without one.
+    named = path or Path(f"proposal{_SUFFIX.get(lang, '.txt')}")
+    before_cc = complexity_of(named, original).max_cc
+    after_cc = complexity_of(named, proposed).max_cc
 
     # A public name disappearing is not necessarily wrong, but the reviewer should know.
     lost = sorted(_symbol_names(before, lang) - _symbol_names(after, lang))

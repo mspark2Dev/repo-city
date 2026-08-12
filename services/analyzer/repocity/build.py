@@ -19,7 +19,7 @@ from .cache import FileCache
 from .imports import resolve_imports
 from .imports.tsconfig import load_aliases
 from .layout import DISTRICT_PADDING, SLACK, LayoutItem, depth_y, inset, split_rect, squarify
-from .metrics import count_loc
+from .metrics import complexity_of, count_loc
 from .parse import ImportSpec, parse_source
 from .scan import ScannedFile, scan
 from .schema import (
@@ -156,13 +156,15 @@ def _analyze_file(file: ScannedFile) -> _FileFacts:
     counts = count_loc(text, file.lang)
     facts.loc, facts.sloc, facts.comments = counts.loc, counts.sloc, counts.comments
 
+    measured = complexity_of(file.abs_path, text)
+    facts.cc = (measured.max_cc, measured.avg_cc)
+
     parsed = parse_source(raw, file.lang)
     # Docstrings are documentation, so they move from the code tally to the comment tally.
     facts.comments += parsed.doc_lines
     facts.sloc = max(facts.sloc - parsed.doc_lines, 0)
     facts.functions = parsed.functions
     facts.classes = parsed.classes
-    facts.cc = (parsed.cc.max_cc, parsed.cc.avg_cc)
     facts.imports = parsed.imports
     return facts
 

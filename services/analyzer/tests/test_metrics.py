@@ -21,7 +21,11 @@ def test_line_counts_split_code_and_comments():
     assert (counts.loc, counts.sloc, counts.comments) == (4, 2, 1)
 
 
-def test_complexity_counts_operators_only_when_they_branch():
-    plain = parse_source(b"const a = 1 + 2;\n", "typescript").cc.max_cc
-    branching = parse_source(b"const a = b && c;\n", "typescript").cc.max_cc
+def test_complexity_counts_boolean_operators_as_branches():
+    from pathlib import Path
+
+    from repocity.metrics import complexity_of
+
+    plain = complexity_of(Path("a.ts"), "function f() { return 1 + 2 }\n").max_cc
+    branching = complexity_of(Path("a.ts"), "function f() { return b && c }\n").max_cc
     assert branching == plain + 1

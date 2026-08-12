@@ -154,13 +154,14 @@ your repository, and Revert restores them byte for byte.
 
 | | |
 |---|---|
-| Size, complexity, symbols **and imports** | Python, TypeScript, JavaScript, Java, Kotlin, C, C++ |
-| Size, complexity, symbols | Go, Rust, C#, Ruby, PHP, Swift, Scala |
+| Size, complexity, functions **and imports** | Python, TypeScript, JavaScript, Java, Kotlin, C, C++ |
+| Size, complexity, functions | Go, Rust, C#, Ruby, PHP, Swift, Scala, Objective-C, Lua, Perl, R, Erlang, Fortran, Solidity, Zig, Vue, GDScript, PL/SQL, Smalltalk, TTCN |
 | Lines only | everything else it can read |
 
-Metrics need only a grammar; a dependency graph needs that language's module rules written
-out, which is why the two lists differ. The panel reports what share of imports resolved,
-so the gap is visible rather than implied.
+Complexity comes from [lizard](https://github.com/terryyin/lizard), which reads all of the
+above. A dependency graph needs each language's module rules written out, which is why the
+first list is shorter. The panel reports what share of imports resolved, so the gap is
+visible rather than implied.
 
 ## Requirements
 

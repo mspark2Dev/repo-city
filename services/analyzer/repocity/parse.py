@@ -1,4 +1,8 @@
-"""tree-sitter parsing: symbol counts and raw import specifiers.
+"""tree-sitter parsing: symbol counts, raw import specifiers, and the syntax gate.
+
+Complexity is lizard's job (see metrics/complexity.py). What is left here is what lizard
+does not do: which files import which, how many symbols a file declares, and whether the
+agent's output still parses.
 
 Traversal is driven by node-type sets rather than the query language. Node type names are
 stable across grammar releases, which keeps this working when the language pack updates.
@@ -12,7 +16,6 @@ from functools import lru_cache
 from tree_sitter import Node, Parser
 from tree_sitter_language_pack import get_parser
 
-from .metrics.complexity import ComplexityResult, complexity
 from .schema import Lang
 
 _GRAMMAR: dict[Lang, str] = {
@@ -93,9 +96,6 @@ class ParsedFile:
     classes: int = 0
     doc_lines: int = 0
     imports: list[ImportSpec] = field(default_factory=list)
-    cc: ComplexityResult = field(
-        default_factory=lambda: ComplexityResult(max_cc=0, avg_cc=0.0, total_cc=0, function_count=0)
-    )
     ok: bool = True
 
     @property
@@ -118,7 +118,6 @@ def parse_source(source: bytes, lang: Lang) -> ParsedFile:
     out = ParsedFile()
     _walk(tree.root_node, source, lang, out)
     out.doc_lines = _doc_lines(tree.root_node, lang)
-    out.cc = complexity(tree.root_node, source, _GRAMMAR[lang])
     out.ok = not tree.root_node.has_error
     return out
 

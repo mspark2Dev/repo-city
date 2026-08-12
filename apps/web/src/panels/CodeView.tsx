@@ -16,6 +16,13 @@ export const MONACO_LANG: Record<string, string> = {
   kotlin: 'kotlin',
   swift: 'swift',
   scala: 'scala',
+  objectivec: 'objective-c',
+  lua: 'lua',
+  perl: 'perl',
+  r: 'r',
+  plsql: 'sql',
+  vue: 'html',
+  solidity: 'sol',
   other: 'plaintext',
 }
 

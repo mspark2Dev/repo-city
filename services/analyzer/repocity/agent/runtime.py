@@ -11,6 +11,7 @@ import json
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal
 
 from ..schema import Building, CityMap
@@ -104,7 +105,9 @@ async def run_refactor(
 
         task.status = "verifying"
         for attempt in range(SYNTAX_RETRIES + 1):
-            verdict = verify(context.source, proposal, building.lang)
+            verdict = verify(
+                context.source, proposal, building.lang, Path(city.root) / building.path
+            )
             if verdict.parses:
                 task.verdict = verdict
                 break

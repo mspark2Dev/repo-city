@@ -16,20 +16,36 @@ SCHEMA_VERSION = "1.0"
 
 Grade = Literal["clean", "watch", "hot", "critical"]
 Lang = Literal[
+    # Parsed by tree-sitter as well, so these carry an import graph.
     "python",
     "typescript",
     "javascript",
     "java",
-    "go",
-    "rust",
+    "kotlin",
     "c",
     "cpp",
+    # Measured by lizard: size, complexity and function counts, but no import graph.
+    "go",
+    "rust",
     "csharp",
     "ruby",
     "php",
-    "kotlin",
     "swift",
     "scala",
+    "objectivec",
+    "lua",
+    "perl",
+    "r",
+    "erlang",
+    "fortran",
+    "solidity",
+    "zig",
+    "vue",
+    "gdscript",
+    "plsql",
+    "smalltalk",
+    "ttcn",
+    # Read, counted, and drawn, but not measured.
     "other",
 ]
 

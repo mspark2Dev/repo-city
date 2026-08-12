@@ -147,12 +147,13 @@ LLM_CONTEXT_BUDGET=60000
 
 | | |
 |---|---|
-| 크기·복잡도·심볼 **+ 의존 그래프** | Python, TypeScript, JavaScript, Java, Kotlin, C, C++ |
-| 크기·복잡도·심볼 | Go, Rust, C#, Ruby, PHP, Swift, Scala |
+| 크기·복잡도·함수 **+ 의존 그래프** | Python, TypeScript, JavaScript, Java, Kotlin, C, C++ |
+| 크기·복잡도·함수 | Go, Rust, C#, Ruby, PHP, Swift, Scala, Objective-C, Lua, Perl, R, Erlang, Fortran, Solidity, Zig, Vue, GDScript, PL/SQL, Smalltalk, TTCN |
 | 라인 수만 | 읽을 수 있는 나머지 |
 
-메트릭은 문법만 있으면 되지만 의존 그래프는 그 언어의 모듈 규칙을 따로 구현해야 해서 목록이
-다르다. 패널이 import 해석률을 표시하므로 그 차이는 숨겨지지 않고 드러난다.
+복잡도는 [lizard](https://github.com/terryyin/lizard) 가 측정하며 위 언어를 모두 읽는다.
+의존 그래프는 언어별 모듈 규칙을 따로 구현해야 해서 첫 목록이 더 짧다. 패널이 import 해석률을
+표시하므로 그 차이는 숨겨지지 않고 드러난다.
 
 ## 요구사항
 
