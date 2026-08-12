@@ -12,6 +12,7 @@ shell.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -22,10 +23,11 @@ from .settings import data_root
 ALLOWED_SCHEMES = ("https://", "http://", "ssh://", "git://")
 SCP_LIKE = re.compile(r"^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+(:\d+)?:[^\s]+$")
 
-# github.com/o/r/tree/<rest> and gitlab.com/g/p/-/tree/<rest>, which is what the address bar
-# holds when someone is looking at a branch.
+# github.com/o/r/tree/<rest> and gitlab.com/g/sub/p/-/tree/<rest>, which is what the address
+# bar holds when someone is looking at a branch. The repository part is not a fixed depth:
+# GitLab nests groups, so owner/repo is only the shallowest case.
 WEB_BROWSE = re.compile(
-    r"^(?P<repo>https?://[^/]+/[^/]+/[^/]+?)(?:\.git)?/(?:-/)?(?:tree|blob|commits?)/(?P<rest>.+)$"
+    r"^(?P<repo>https?://[^/]+/.+?)(?:\.git)?/(?:-/)?(?:tree|blob|commits?)/(?P<rest>.+)$"
 )
 
 REF_ALLOWED = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
@@ -104,7 +106,7 @@ def remote_refs(url: str) -> list[str]:
             capture_output=True,
             text=True,
             timeout=LS_REMOTE_TIMEOUT,
-            env={"GIT_TERMINAL_PROMPT": "0", "PATH": _path_env()},
+            env=_git_env(),
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         raise SourceError(f"could not read refs from {url}", "clone.unreachable") from exc
@@ -203,9 +205,7 @@ def _run_clone(url: str, destination: Path, ref: str | None = None) -> None:
             capture_output=True,
             text=True,
             timeout=CLONE_TIMEOUT,
-            # Without this a private repository makes git block on a password prompt,
-            # which would hang the request instead of failing it.
-            env={"GIT_TERMINAL_PROMPT": "0", "PATH": _path_env()},
+            env=_git_env(),
         )
     except FileNotFoundError as exc:
         raise SourceError("git is not installed", "git.missing") from exc
@@ -218,10 +218,17 @@ def _run_clone(url: str, destination: Path, ref: str | None = None) -> None:
         raise SourceError(message, code)
 
 
-def _path_env() -> str:
-    import os
+def _git_env() -> dict[str, str]:
+    """The caller's environment, with interactive prompting turned off.
 
-    return os.environ.get("PATH", "/usr/bin:/bin:/usr/local/bin")
+    git finds credentials through ~/.gitconfig and its helpers, so handing it a stripped
+    environment without HOME means every private repository fails to authenticate — which
+    is exactly what happened when this passed only PATH.
+    """
+    env = dict(os.environ)
+    # A password prompt would hang the request rather than failing it.
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    return env
 
 
 def _clone_failure(stderr: str) -> tuple[str, str]:
