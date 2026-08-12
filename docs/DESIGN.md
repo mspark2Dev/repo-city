@@ -242,8 +242,26 @@ squarified treemap 은 남은 사각형을 면적 비율로 항상 꽉 채우므
 ## 4-a. 분석 대상 해석 (`sources.py`)
 
 `path` 필드는 **로컬 디렉토리 경로 또는 git URL** 둘 다 받는다. 디렉토리면 그대로 쓰고,
-URL 이면 `~/.local/share/repocity/clones/<repo>-<hash>/` 에 shallow clone(`--depth 1
---single-branch --no-tags`) 한 뒤 그 체크아웃을 분석한다.
+URL 이면 `~/.local/share/repocity/clones/<repo>-<ref>-<hash>/` 에 shallow clone 한 뒤 그
+체크아웃을 분석한다.
+
+**브랜치·태그 지정** — 지정하지 않으면 원격의 기본 브랜치(main, master, develop 무엇이든)를
+가져온다. 그 외를 보려면 두 가지 방식이 있다:
+
+| 입력 | 결과 |
+|---|---|
+| `https://host/o/r.git` | 기본 브랜치 |
+| `https://host/o/r.git#stable` | 브랜치 또는 태그 `stable` |
+| `https://github.com/o/r/tree/stable` | 브랜치 `stable` |
+| `https://github.com/o/r/tree/stable/src` | 브랜치 `stable` 의 `src` 하위만 분석 |
+| `https://gitlab.com/g/p/-/tree/release-2.0` | GitLab 형식도 동일 |
+
+**[결정 10] 브라우징 URL 의 ref 와 하위 경로는 원격에 물어서 가른다.** `tree/feature/login/api`
+에서 브랜치가 `feature`인지 `feature/login`인지는 문자열만 봐서는 알 수 없다. 브랜치 이름에도
+슬래시가 들어가고 그 뒤 경로에도 들어가기 때문이다. `git ls-remote` 로 원격이 실제로 광고하는
+ref 목록을 받아 **가장 긴 접두사**로 가른다.
+
+ref 마다 별도 체크아웃을 둔다. 브랜치를 오가며 서로의 작업 트리를 건드리지 않기 위함이다.
 
 **[결정 9] git URL 을 그대로 `git` 에 넘기지 않는다.** 사용자가 입력한 문자열이 명령 인자가
 되는 지점이라, 다음을 강제한다:
@@ -255,6 +273,14 @@ URL 이면 `~/.local/share/repocity/clones/<repo>-<hash>/` 에 shallow clone(`--
 - `GIT_TERMINAL_PROMPT=0` — 비공개 리포에서 git 이 비밀번호를 물으며 멈추면 요청이
   실패가 아니라 **정지**한다
 - 5분 타임아웃
+- ref 이름은 `[A-Za-z0-9][A-Za-z0-9._/-]*` 만 허용하고 `..` 을 거부한다
+
+에러는 문장과 함께 **코드**(`ref.not_found`, `clone.auth`, …)를 실어 보낸다. UI 가 읽는 이의
+언어로 문구를 고르려면 서버 문장을 파싱하는 것 말고 다른 방법이 필요하기 때문이다.
+
+**프로젝트 ID 는 사용자가 입력한 문자열에서 뽑는다.** 브라우징 URL 은 원격에 묻기 전까지
+최종 경로를 알 수 없는데, 클라이언트는 요청 즉시 소켓 채널을 알아야 한다. 입력 문자열 기준으로
+정하면 소켓·저장소·CityMap 이 하나의 ID 를 공유하고 재분석해도 유지된다.
 
 이미 클론된 디렉토리가 있으면 **재사용하고 fetch 하지 않는다.** 에이전트가 그 체크아웃에
 변경을 적용했을 수 있고, 조용히 reset 하는 것은 작업을 잃는 것과 같다.

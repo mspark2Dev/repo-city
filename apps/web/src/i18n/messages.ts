@@ -8,8 +8,8 @@ const en = {
   localeName: 'English',
 
   loader: {
-    placeholder: 'a local path, or https://github.com/owner/repo.git',
-    hint: 'Local directory path or git URL (GitHub, GitLab, …)',
+    placeholder: 'a local path, or https://github.com/owner/repo.git#branch',
+    hint: 'Local path, or git URL — add #branch, or paste a branch page address',
     analyze: 'analyze',
     analyzing: 'analyzing…',
   },
@@ -31,10 +31,13 @@ const en = {
       'Unresolved specifiers are packages or paths this analyzer could not map to a file. ' +
       'They are excluded from the graph, so this share is how much of the dependency picture ' +
       'you are actually seeing.',
+    branch: (ref: string) => `branch/tag ${ref}`,
+    subpath: (path: string) => `subdirectory ${path}`,
     selectHint: 'Click a building to inspect it. Double-click to fly to it.',
     sourceHint:
       'The field at the top left takes a local path or a git URL; remote repositories are ' +
-      'cloned shallowly into your data directory.',
+      'cloned shallowly into your data directory. Add #branch to a URL, or paste the ' +
+      'address of a branch page, to analyze something other than the default branch.',
   },
 
   building: {
@@ -75,6 +78,21 @@ const en = {
     ],
   },
 
+  errors: {
+    'source.empty': 'Enter a path or a git URL.',
+    'source.invalid': 'That URL is not accepted. Use https, ssh or git.',
+    'source.unknown': 'That is neither a directory on this machine nor a git URL.',
+    'ref.invalid': 'That is not a usable branch or tag name.',
+    'ref.not_found': 'That branch or tag does not exist on the remote.',
+    'subpath.not_found': 'That subdirectory does not exist in the repository.',
+    'clone.auth': 'The repository is private, and git has no credentials for it.',
+    'clone.not_found': 'The repository was not found.',
+    'clone.timeout': 'Cloning took too long and was stopped.',
+    'clone.unreachable': 'The remote could not be reached.',
+    'clone.disabled': 'Cloning is disabled.',
+    'git.missing': 'git is not installed on the machine running the analyzer.',
+  } as Record<string, string>,
+
   proposal: {
     title: 'Proposed change',
     maxCC: (before: number, after: number) => `max CC ${before} → ${after}`,
@@ -108,8 +126,8 @@ const ko: Messages = {
   localeName: '한국어',
 
   loader: {
-    placeholder: '로컬 경로 또는 https://github.com/owner/repo.git',
-    hint: '로컬 디렉터리 경로 또는 git URL (GitHub, GitLab, …)',
+    placeholder: '로컬 경로 또는 https://github.com/owner/repo.git#브랜치',
+    hint: '로컬 경로 또는 git URL — #브랜치 를 붙이거나 브랜치 페이지 주소를 붙여넣으세요',
     analyze: '분석',
     analyzing: '분석 중…',
   },
@@ -130,10 +148,13 @@ const ko: Messages = {
     unresolvedNote:
       '미해석 import 는 외부 패키지이거나 분석기가 파일로 연결하지 못한 경로다. ' +
       '그래프에서 제외되므로, 이 비율이 곧 지금 보고 있는 의존 관계의 신뢰도다.',
+    branch: (ref: string) => `브랜치/태그 ${ref}`,
+    subpath: (path: string) => `하위 경로 ${path}`,
     selectHint: '건물을 클릭하면 상세가 열린다. 더블클릭하면 그 건물로 이동한다.',
     sourceHint:
       '좌측 상단 입력창은 로컬 경로와 git URL 을 모두 받는다. 원격 리포지터리는 데이터 ' +
-      '디렉터리에 얕게 클론된다.',
+      '디렉터리에 얕게 클론된다. 기본 브랜치가 아닌 것을 보려면 URL 뒤에 #브랜치 를 붙이거나 ' +
+      '브랜치 페이지 주소를 그대로 붙여넣으면 된다.',
   },
 
   building: {
@@ -173,6 +194,21 @@ const ko: Messages = {
       '모든 함수에 타입 힌트를 붙여줘.',
       '반복되는 분기를 조회 테이블로 빼줘.',
     ],
+  },
+
+  errors: {
+    'source.empty': '경로나 git URL 을 입력하세요.',
+    'source.invalid': '받을 수 없는 URL 입니다. https, ssh, git 만 지원합니다.',
+    'source.unknown': '이 머신의 디렉터리도 아니고 git URL 도 아닙니다.',
+    'ref.invalid': '쓸 수 없는 브랜치·태그 이름입니다.',
+    'ref.not_found': '원격에 그런 브랜치나 태그가 없습니다.',
+    'subpath.not_found': '리포지터리에 그런 하위 디렉터리가 없습니다.',
+    'clone.auth': '비공개 리포지터리인데 git 에 자격증명이 없습니다.',
+    'clone.not_found': '리포지터리를 찾을 수 없습니다.',
+    'clone.timeout': '클론이 너무 오래 걸려 중단했습니다.',
+    'clone.unreachable': '원격에 연결하지 못했습니다.',
+    'clone.disabled': '클론 기능이 꺼져 있습니다.',
+    'git.missing': '분석기가 도는 머신에 git 이 설치돼 있지 않습니다.',
   },
 
   proposal: {

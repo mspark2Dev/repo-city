@@ -79,6 +79,18 @@ https://github.com/owner/repo.git
 git@gitlab.example.com:group/repo.git
 ```
 
+브랜치를 지정하지 않으면 원격의 기본 브랜치를 가져온다(main 이든 master 든). 다른 것을 보려면
+`#브랜치` 를 붙이거나 브랜치 페이지 주소를 그대로 붙여넣는다:
+
+```
+https://github.com/owner/repo.git#develop
+https://github.com/owner/repo/tree/release-2.0
+https://github.com/owner/repo/tree/main/packages/core   # 그 하위 디렉터리만
+https://gitlab.example.com/group/repo/-/tree/staging
+```
+
+태그도 브랜치와 동일하게 쓸 수 있다. ref 마다 별도 체크아웃이라 브랜치를 오가도 서로 영향이 없다.
+
 원격 리포지토리는 `~/.local/share/repocity/clones/` 에 shallow clone 된다. 이미 클론된 것이
 있으면 다시 받지 않고 재사용하므로, 거기에 적용한 변경이 날아가지 않는다. 비공개 리포는 git 이
 이미 가진 자격증명을 쓰며, repoCity 가 별도로 묻지 않는다.

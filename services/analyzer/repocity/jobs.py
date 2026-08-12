@@ -23,8 +23,11 @@ class Job:
     done: int = 0
     total: int = 0
     error: str | None = None
+    error_code: str | None = None
     source: str | None = None
     resolved_path: str | None = None
+    ref: str | None = None
+    subpath: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -34,8 +37,11 @@ class Job:
             "done": self.done,
             "total": self.total,
             "error": self.error,
+            "errorCode": self.error_code,
             "source": self.source,
             "resolvedPath": self.resolved_path,
+            "ref": self.ref,
+            "subpath": self.subpath,
         }
 
 

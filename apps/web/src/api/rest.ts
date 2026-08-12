@@ -12,10 +12,33 @@ export interface FileDetail {
   importedBy: string[]
 }
 
+/** Errors carry a code so the interface can phrase them in the reader's language. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message)
+  }
+}
+
 async function json<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const detail = await response.text()
-    throw new Error(`${response.status} ${response.statusText}: ${detail}`)
+    const body = await response.text()
+    let code: string | null = null
+    let message = body
+    try {
+      const detail = (JSON.parse(body) as { detail?: unknown }).detail
+      if (detail && typeof detail === 'object') {
+        code = (detail as { code?: string }).code ?? null
+        message = (detail as { message?: string }).message ?? body
+      } else if (typeof detail === 'string') {
+        message = detail
+      }
+    } catch {
+      // A non-JSON body is shown as-is.
+    }
+    throw new ApiError(`${response.status} ${response.statusText}: ${message}`, code)
   }
   return response.json() as Promise<T>
 }
@@ -38,8 +61,11 @@ export interface JobStatus {
   done: number
   total: number
   error: string | null
+  errorCode: string | null
   source: string | null
   resolvedPath: string | null
+  ref: string | null
+  subpath: string | null
 }
 
 export async function analysisStatus(jobId: string): Promise<JobStatus> {

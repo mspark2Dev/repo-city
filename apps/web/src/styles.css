@@ -519,3 +519,19 @@ pre {
   background: #1d4ed8;
   color: white;
 }
+
+.origin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -4px 0 12px;
+}
+
+.origin span {
+  background: #1a2436;
+  border-radius: 4px;
+  color: #9ec9ff;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  padding: 2px 7px;
+}

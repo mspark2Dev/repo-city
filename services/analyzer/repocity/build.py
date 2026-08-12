@@ -187,7 +187,15 @@ def build_city(
     *,
     use_cache: bool = True,
     on_progress: ProgressHook | None = None,
+    project_id: str | None = None,
 ) -> CityMap:
+    """Analyze `root` into a CityMap.
+
+    `project_id` overrides the path-derived id. A cloned repository is not on disk yet when
+    the caller has to name the project, so the id is derived from what the user typed and
+    passed down here; otherwise the id the client was told and the id the city carries
+    would not match.
+    """
     started = time.perf_counter()
     root = root.resolve()
 
@@ -251,7 +259,7 @@ def build_city(
 
     return CityMap(
         schema_version=SCHEMA_VERSION,
-        project_id=hashlib.sha1(str(root).encode()).hexdigest()[:12],
+        project_id=project_id or hashlib.sha1(str(root).encode()).hexdigest()[:12],
         root=str(root),
         generated_at=datetime.now(UTC),
         stats=Stats(

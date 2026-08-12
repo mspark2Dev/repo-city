@@ -25,6 +25,7 @@ export function Inspector() {
   const llm = useCityStore((s) => s.llm)
   const snapshotId = useCityStore((s) => s.snapshotId)
   const revert = useCityStore((s) => s.revert)
+  const origin = useCityStore((s) => s.origin)
   const building = useCityStore((s) => s.selected)
   const detail = useCityStore((s) => s.detail)
 
@@ -41,6 +42,12 @@ export function Inspector() {
       <div className="inspector">
         {badge}
         <h2>{t.city.title}</h2>
+        {(origin?.ref || origin?.subpath) && (
+          <p className="origin">
+            {origin.ref && <span>{t.city.branch(origin.ref)}</span>}
+            {origin.subpath && <span>{t.city.subpath(origin.subpath)}</span>}
+          </p>
+        )}
         <Row label={t.city.files} value={city.stats.files} />
         <Row label={t.city.lines} value={city.stats.loc.toLocaleString()} />
         <Row label={t.city.resolved} value={city.stats.links} />

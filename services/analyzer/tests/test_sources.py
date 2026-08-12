@@ -92,3 +92,57 @@ def test_an_existing_checkout_is_reused_rather_than_refetched(tmp_path, monkeypa
     assert source.path == destination
     assert source.kind == "clone"
     assert not source.cloned
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://host/o/r.git#develop", ("https://host/o/r.git", "develop")),
+        ("https://host/o/r.git", ("https://host/o/r.git", None)),
+        ("https://host/o/r.git#", ("https://host/o/r.git#", None)),
+    ],
+)
+def test_a_fragment_names_a_ref(value: str, expected: tuple[str, str | None]):
+    from repocity.sources import split_ref
+
+    assert split_ref(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://github.com/o/r/tree/stable", ("https://github.com/o/r", "stable")),
+        ("https://github.com/o/r/tree/main/src", ("https://github.com/o/r", "main/src")),
+        ("https://gitlab.com/g/p/-/tree/release", ("https://gitlab.com/g/p", "release")),
+        ("https://github.com/o/r/blob/main/a.py", ("https://github.com/o/r", "main/a.py")),
+        ("https://github.com/o/r.git", None),
+        ("https://github.com/o/r", None),
+    ],
+)
+def test_browsing_urls_split_into_repo_and_remainder(url: str, expected):
+    from repocity.sources import parse_browse_url
+
+    assert parse_browse_url(url) == expected
+
+
+def test_each_ref_gets_its_own_checkout(tmp_path, monkeypatch):
+    """Switching branches must not disturb the checkout the other branch is using."""
+    monkeypatch.setenv("REPOCITY_DATA_DIR", str(tmp_path))
+    url = "https://github.com/o/r.git"
+    assert clone_dir(url, "main") != clone_dir(url, "develop")
+    assert clone_dir(url, None) != clone_dir(url, "main")
+    assert "develop" in clone_dir(url, "develop").name
+
+
+@pytest.mark.parametrize("ref", ["-x", "a..b", "feature/", "with space", ""])
+def test_unusable_refs_are_refused(ref: str, tmp_path, monkeypatch):
+    monkeypatch.setenv("REPOCITY_DATA_DIR", str(tmp_path))
+    with pytest.raises(SourceError):
+        resolve(f"https://github.com/o/r.git#{ref}" if ref else "https://github.com/o/r.git#")
+
+
+def test_errors_carry_a_code_for_the_interface_to_translate(tmp_path, monkeypatch):
+    monkeypatch.setenv("REPOCITY_DATA_DIR", str(tmp_path))
+    with pytest.raises(SourceError) as caught:
+        resolve("ext::sh -c whoami")
+    assert caught.value.code == "source.unknown"

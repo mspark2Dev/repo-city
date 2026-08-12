@@ -42,7 +42,21 @@ def test_analysis_reports_a_job_then_completes(client):
 
 
 def test_analyzing_a_missing_path_is_rejected(client):
-    assert client.post("/api/v1/analyze", json={"path": "/no/such/dir"}).status_code == 400
+    response = client.post("/api/v1/analyze", json={"path": "/no/such/dir"})
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "source.unknown"
+
+
+def test_a_git_url_is_accepted_without_touching_the_network(client):
+    """Validation must not clone; the job does that, so a URL is accepted immediately."""
+    response = client.post("/api/v1/analyze", json={"path": "https://example.com/o/r.git"})
+    assert response.status_code == 202
+    assert response.json()["willClone"] is True
+
+
+def test_a_branch_can_be_named_with_a_fragment(client):
+    response = client.post("/api/v1/analyze", json={"path": "https://example.com/o/r.git#dev"})
+    assert response.status_code == 202
 
 
 def test_unknown_job_and_project_are_404(client):

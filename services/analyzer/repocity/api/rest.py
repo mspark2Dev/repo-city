@@ -17,7 +17,14 @@ from ..build import build_city
 from ..delta import diff_cities
 from ..jobs import JobRegistry
 from ..schema import CityMap
-from ..sources import SourceError, clone_dir, looks_like_git_url, resolve
+from ..sources import (
+    SourceError,
+    clone_dir,
+    looks_like_git_url,
+    parse_browse_url,
+    resolve,
+    split_ref,
+)
 from ..store import ProjectStore, UnknownProject
 from .ws import hub
 
@@ -63,18 +70,26 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     source = request.path.strip()
     local = Path(source).expanduser()
 
-    if not local.is_dir() and not looks_like_git_url(source):
-        raise HTTPException(status_code=400, detail=f"not a directory, and not a git URL: {source}")
+    if not local.is_dir() and not looks_like_git_url(split_ref(source)[0]):
+        # A code as well as a sentence: the client shows this in the reader's language.
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "source.unknown",
+                "message": f"not a directory, and not a git URL: {source}",
+            },
+        )
 
-    # A clone's project id is not known until it lands, so the id is derived from the
-    # source string. It stays stable across re-analyses of the same URL either way.
+    # Derived from what the user typed, because a browsing URL's branch cannot be separated
+    # from its subdirectory without asking the remote. Deriving it here keeps one id for the
+    # socket channel, the store and the city, and it stays stable across re-analyses.
     project_id = project_id_for(local) if local.is_dir() else project_id_for_source(source)
     job = jobs.create(project_id, str(local), source=source)
     asyncio.create_task(_run_analysis(job, source, tuple(request.exclude)))
 
     # The clone starts before the client can subscribe, so the response says it is coming
     # rather than relying on an event the client would miss on a fast clone.
-    will_clone = not local.is_dir() and not (clone_dir(source) / ".git").is_dir()
+    will_clone = not local.is_dir() and not _already_cloned(source)
     return AnalyzeResponse(job_id=job.id, project_id=project_id, will_clone=will_clone)
 
 
@@ -90,15 +105,23 @@ async def _run_analysis(job, source: str, excludes: tuple[str, ...]) -> None:
     try:
         resolved = await asyncio.to_thread(resolve, source)
     except SourceError as exc:
-        job.status, job.error = "error", str(exc)
+        job.status, job.error, job.error_code = "error", str(exc), exc.code
         await hub.broadcast(
-            job.project_id, {"type": "analysis.error", "jobId": job.id, "message": str(exc)}
+            job.project_id,
+            {
+                "type": "analysis.error",
+                "jobId": job.id,
+                "message": str(exc),
+                "code": exc.code,
+            },
         )
         return
 
     root = resolved.path
     job.status = "running"
     job.resolved_path = str(root)
+    job.ref = resolved.ref
+    job.subpath = resolved.subpath
 
     def on_progress(done: int, total: int) -> None:
         job.done, job.total = done, total
@@ -112,11 +135,17 @@ async def _run_analysis(job, source: str, excludes: tuple[str, ...]) -> None:
         )
 
     try:
-        city = await asyncio.to_thread(build_city, root, excludes, on_progress=on_progress)
+        city = await asyncio.to_thread(_build, root, excludes, on_progress, job.project_id)
     except OSError as exc:
-        job.status, job.error = "error", str(exc)
+        job.status, job.error, job.error_code = "error", str(exc), "analysis.failed"
         await hub.broadcast(
-            job.project_id, {"type": "analysis.error", "jobId": job.id, "message": str(exc)}
+            job.project_id,
+            {
+                "type": "analysis.error",
+                "jobId": job.id,
+                "message": str(exc),
+                "code": "analysis.failed",
+            },
         )
         return
 
@@ -131,6 +160,10 @@ async def _run_analysis(job, source: str, excludes: tuple[str, ...]) -> None:
         await hub.broadcast(
             job.project_id, {"type": "citymap.delta", **diff_cities(previous, city)}
         )
+
+
+def _build(root: Path, excludes: tuple[str, ...], on_progress, project_id: str):
+    return build_city(root, excludes, on_progress=on_progress, project_id=project_id)
 
 
 @router.get("/analyze/{job_id}")
@@ -234,7 +267,10 @@ async def prewarm(request: PrewarmRequest, background: BackgroundTasks) -> dict:
 async def refactor(request: RefactorRequest) -> dict:
     city, building = _city_and_building(request.project_id, request.node_id)
     if not request.instruction.strip():
-        raise HTTPException(status_code=400, detail="instruction is empty")
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "instruction.empty", "message": "instruction is empty"},
+        )
 
     task = tasks.create(request.project_id, request.node_id, request.instruction)
     emit = hub.emitter(request.project_id)
@@ -300,9 +336,16 @@ async def revert_snapshot(request: RevertRequest) -> dict:
     }
 
 
+def _already_cloned(source: str) -> bool:
+    url, ref = split_ref(source)
+    browsed = parse_browse_url(url)
+    target = clone_dir(*browsed) if browsed is not None and ref is None else clone_dir(url, ref)
+    return (target / ".git").is_dir()
+
+
 def project_id_for(root: Path) -> str:
     return hashlib.sha1(str(root.resolve()).encode()).hexdigest()[:12]
 
 
 def project_id_for_source(source: str) -> str:
-    return project_id_for(clone_dir(source))
+    return hashlib.sha1(source.strip().encode()).hexdigest()[:12]

@@ -9,8 +9,10 @@ import {
   prewarm,
   requestRefactor,
   revertSnapshot,
+  ApiError,
   type AgentHealth,
   type FileDetail,
+  type JobStatus,
 } from './api/rest'
 import { connect, type ServerEvent, type Verdict } from './api/ws'
 import { useLocaleStore } from './i18n'
@@ -39,6 +41,7 @@ interface CityState {
 
   progress: { done: number; total: number } | null
   cloning: string | null
+  origin: { ref: string | null; subpath: string | null } | null
   transitions: Transition[]
   ghosts: Building[]
   baseline: CityMap | null
@@ -75,6 +78,7 @@ export const useCityStore = create<CityState>((set, get) => ({
   hovered: null,
   progress: null,
   cloning: null,
+  origin: null,
   transitions: [],
   ghosts: [],
   baseline: null,
@@ -96,6 +100,7 @@ export const useCityStore = create<CityState>((set, get) => ({
       proposal: null,
       progress: null,
       cloning: null,
+      origin: null,
       transitions: [],
       ghosts: [],
     })
@@ -119,7 +124,8 @@ export const useCityStore = create<CityState>((set, get) => ({
         })
       }
 
-      await waitForAnalysis(jobId)
+      const finished = await waitForAnalysis(jobId)
+      set({ origin: { ref: finished.ref, subpath: finished.subpath } })
 
       // Re-analyzing a project already on screen arrives as a delta, which is what makes
       // the buildings animate. Refetch only if that delta did not land.
@@ -135,7 +141,7 @@ export const useCityStore = create<CityState>((set, get) => ({
         .then((llm) => set({ llm }))
         .catch(() => set({ llm: { ok: false, model: null, detail: 'unreachable' } }))
     } catch (error) {
-      set({ status: 'error', error: message(error), progress: null, cloning: null })
+      set({ status: 'error', error: describe(error), progress: null, cloning: null })
     }
   },
 
@@ -198,16 +204,34 @@ export const useCityStore = create<CityState>((set, get) => ({
 
 const POLL_MS = 150
 
+/** Carries the server's error code so the message can be shown in the reader's language. */
+class SourceFailure extends Error {
+  constructor(
+    message: string | null,
+    readonly code: string | null,
+  ) {
+    super(message ?? 'analysis failed')
+  }
+}
+
+function describe(error: unknown): string {
+  const messages = useLocaleStore.getState().t.errors
+  const code =
+    error instanceof SourceFailure || error instanceof ApiError ? (error.code ?? null) : null
+  if (code && messages[code]) return messages[code]
+  return error instanceof Error ? error.message : String(error)
+}
+
 function sameStats(a: CityMap['stats'], b: CityMap['stats']): boolean {
   return a.files === b.files && a.loc === b.loc && a.links === b.links
 }
 
 /** The socket reports completion; polling is the fallback if a frame is missed. */
-async function waitForAnalysis(jobId: string): Promise<void> {
+async function waitForAnalysis(jobId: string): Promise<JobStatus> {
   for (;;) {
     const status = await analysisStatus(jobId)
-    if (status.status === 'done') return
-    if (status.status === 'error') throw new Error(status.error ?? 'analysis failed')
+    if (status.status === 'done') return status
+    if (status.status === 'error') throw new SourceFailure(status.error, status.errorCode)
     await new Promise((resolve) => setTimeout(resolve, POLL_MS))
   }
 }
@@ -265,9 +289,12 @@ function handleEvent(event: ServerEvent, set: Setter, get: Getter): void {
       set({ progress: null, cloning: null })
       break
 
-    case 'analysis.error':
-      set({ status: 'error', error: event.message, progress: null, cloning: null })
+    case 'analysis.error': {
+      const messages = useLocaleStore.getState().t.errors
+      const text = (event.code && messages[event.code]) || event.message
+      set({ status: 'error', error: text, progress: null, cloning: null })
       break
+    }
 
     case 'citymap.delta': {
       const current = get().city

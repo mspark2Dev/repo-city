@@ -83,6 +83,19 @@ https://github.com/owner/repo.git
 git@gitlab.example.com:group/repo.git
 ```
 
+Without a branch you get the remote's default, whatever it is called. To analyze something
+else, add `#branch` or paste the address of a branch page:
+
+```
+https://github.com/owner/repo.git#develop
+https://github.com/owner/repo/tree/release-2.0
+https://github.com/owner/repo/tree/main/packages/core   # just that subdirectory
+https://gitlab.example.com/group/repo/-/tree/staging
+```
+
+Tags work anywhere a branch does. Each ref gets its own checkout, so switching between them
+leaves the other alone.
+
 Remote repositories are cloned shallowly into `~/.local/share/repocity/clones/`. An existing
 checkout is reused rather than refetched, so changes you applied there are not thrown away.
 Private repositories use whatever credentials git already has; repoCity never prompts.
