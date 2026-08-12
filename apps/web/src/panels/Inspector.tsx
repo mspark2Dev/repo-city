@@ -27,6 +27,8 @@ export function Inspector() {
   const revert = useCityStore((s) => s.revert)
   const origin = useCityStore((s) => s.origin)
   const building = useCityStore((s) => s.selected)
+  const selectedFloor = useCityStore((s) => s.selectedFloor)
+  const select = useCityStore((s) => s.select)
   const detail = useCityStore((s) => s.detail)
 
   if (!city) return null
@@ -63,6 +65,7 @@ export function Inspector() {
   }
 
   const m = building.metrics
+  const floors = building.floors ?? []
   return (
     <div className="inspector">
       {badge}
@@ -79,6 +82,11 @@ export function Inspector() {
         {t.building.gradeBadge(t.grade[building.grade], m.maxCC)}
       </div>
       <p className="path">{building.path}</p>
+      {selectedFloor !== null && floors[selectedFloor] && (
+        <p className="selected-floor">
+          {t.building.selectedFloor(floors[selectedFloor].name, floors[selectedFloor].line)}
+        </p>
+      )}
 
       <Row label={t.building.lines} value={m.loc} />
       <Row label={t.building.codeComments} value={`${m.sloc} / ${m.comments}`} />
@@ -86,6 +94,33 @@ export function Inspector() {
       <Row label={t.building.avgCC} value={m.avgCC} />
       <Row label={t.building.importedBy} value={m.fanIn} />
       <Row label={t.building.imports} value={m.fanOut} />
+
+      {floors.length > 0 && (
+        <>
+          <h3>{t.building.functions}</h3>
+          <p className="hint">{t.building.floorHint}</p>
+          <ul className="floors">
+            {[...floors]
+              .map((floor, index) => ({ floor, index }))
+              .sort((a, b) => b.floor.cc - a.floor.cc || a.floor.line - b.floor.line)
+              .map(({ floor, index }) => (
+                <li key={`${floor.name}-${floor.line}`}>
+                  <button
+                    type="button"
+                    className={index === selectedFloor ? 'on' : ''}
+                    onClick={() => void select(building.id, index)}
+                  >
+                    <span className="cc" style={{ background: GRADE_COLOR[floor.grade] }}>
+                      {floor.cc}
+                    </span>
+                    <span className="fn">{floor.name}</span>
+                    <span className="ln">L{floor.line}</span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
 
       {detail && (
         <>

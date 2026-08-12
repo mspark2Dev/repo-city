@@ -36,6 +36,7 @@ interface CityState {
   projectId: string | null
   city: CityMap | null
   selected: Building | null
+  selectedFloor: number | null
   detail: FileDetail | null
   hovered: string | null
 
@@ -57,7 +58,7 @@ interface CityState {
   disconnect: (() => void) | null
 
   load: (path: string) => Promise<void>
-  select: (building: Building | null) => Promise<void>
+  select: (buildingId: string | null, floorIndex?: number | null) => Promise<void>
   hover: (id: string | null) => void
   refactor: (instruction: string) => Promise<void>
   toggleBaseline: () => void
@@ -74,6 +75,7 @@ export const useCityStore = create<CityState>((set, get) => ({
   projectId: null,
   city: null,
   selected: null,
+  selectedFloor: null,
   detail: null,
   hovered: null,
   progress: null,
@@ -145,8 +147,11 @@ export const useCityStore = create<CityState>((set, get) => ({
     }
   },
 
-  select: async (building) => {
-    set({ selected: building, detail: null })
+  select: async (buildingId, floorIndex = null) => {
+    const building = buildingId
+      ? (get().city?.buildings.find((b) => b.id === buildingId) ?? null)
+      : null
+    set({ selected: building, selectedFloor: building ? floorIndex : null, detail: null })
     const { projectId } = get()
     if (!building || !projectId) return
     try {

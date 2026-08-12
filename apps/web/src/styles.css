@@ -535,3 +535,71 @@ pre {
   font-size: 10px;
   padding: 2px 7px;
 }
+
+.selected-floor {
+  background: #1a2436;
+  border-left: 2px solid #4ea8ff;
+  border-radius: 0 4px 4px 0;
+  color: #9ec9ff;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  margin: -8px 0 14px;
+  padding: 6px 9px;
+  word-break: break-all;
+}
+
+ul.floors {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+ul.floors li {
+  padding: 0;
+}
+
+ul.floors button {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 11px;
+  gap: 8px;
+  padding: 3px 4px;
+  text-align: left;
+  width: 100%;
+}
+
+ul.floors button:hover {
+  background: #161c28;
+}
+
+ul.floors button.on {
+  background: #1d4ed8;
+}
+
+ul.floors .cc {
+  border-radius: 3px;
+  color: #0b0e14;
+  flex: none;
+  font-weight: 600;
+  min-width: 26px;
+  padding: 1px 0;
+  text-align: center;
+}
+
+ul.floors .fn {
+  flex: 1;
+  font-family: ui-monospace, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+ul.floors .ln {
+  color: var(--muted);
+  flex: none;
+}

@@ -98,6 +98,21 @@ class District(Model):
     loc: int
 
 
+class Floor(Model):
+    """One function, drawn as a slab of the building it lives in.
+
+    `y` and `height` are computed server-side so the stack stays deterministic and testable
+    alongside the rest of the layout.
+    """
+
+    name: str
+    cc: int
+    line: int
+    grade: Grade
+    y: float
+    height: float
+
+
 class Building(Model):
     id: str
     district_id: str
@@ -109,6 +124,7 @@ class Building(Model):
     height: float
     metrics: Metrics
     grade: Grade
+    floors: list[Floor] = Field(default_factory=list)
 
 
 class Link(Model):

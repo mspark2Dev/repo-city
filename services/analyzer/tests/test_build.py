@@ -148,6 +148,21 @@ def test_cache_invalidates_when_the_analyzer_changes(fixture_root: Path, tmp_pat
     assert cache.FileCache.load(fixture_root).entries == {}
 
 
+def test_the_fingerprint_is_fixed_at_import(fixture_root: Path, tmp_path, monkeypatch):
+    """It must describe the running code, not whatever the files say later.
+
+    Reading them lazily lets a long-lived process write results from code it loaded earlier
+    under a hash of source it never ran — entries that then look valid to every reader.
+    """
+    monkeypatch.setenv("REPOCITY_CACHE_DIR", str(tmp_path))
+    before = cache.analyzer_fingerprint()
+    (Path(cache.__file__).parent / "_probe.py").write_text("# scratch\n", encoding="utf-8")
+    try:
+        assert cache.analyzer_fingerprint() == before
+    finally:
+        (Path(cache.__file__).parent / "_probe.py").unlink()
+
+
 def test_cache_stays_out_of_the_analyzed_repository(fixture_root: Path, tmp_path, monkeypatch):
     """repoCity is pointed at other people's checkouts; it must not leave files in them."""
     monkeypatch.setenv("REPOCITY_CACHE_DIR", str(tmp_path))
@@ -176,3 +191,35 @@ def test_layout_does_not_depend_on_metrics(fixture_root: Path, tmp_path, monkeyp
     after = {b.id: (b.position.x, b.position.z) for b in build_city(project).buildings}
 
     assert before == after
+
+
+def test_floors_stay_inside_their_building(city: CityMap):
+    """A slab poking through the roof would be a building lying about its own size."""
+    for building in city.buildings:
+        for floor in building.floors:
+            assert floor.y >= 0
+            assert floor.y + floor.height <= building.height + 1e-6, (
+                f"{building.path}:{floor.name} reaches {floor.y + floor.height} "
+                f"in a building {building.height} tall"
+            )
+
+
+def test_floors_follow_the_order_of_the_source(city: CityMap):
+    for building in city.buildings:
+        lines = [floor.line for floor in building.floors]
+        assert lines == sorted(lines)
+        heights = [floor.y for floor in building.floors]
+        assert heights == sorted(heights)
+
+
+def test_a_single_function_file_gets_no_floors(city: CityMap):
+    """Slicing a one-function file into one slab says nothing the building did not."""
+    for building in city.buildings:
+        if building.floors:
+            assert len(building.floors) >= 2
+
+
+def test_a_floor_is_graded_like_a_building(city: CityMap):
+    for building in city.buildings:
+        for floor in building.floors:
+            assert floor.grade == grade_for(floor.cc)

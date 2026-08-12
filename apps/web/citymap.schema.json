@@ -68,6 +68,12 @@
             "critical"
           ],
           "type": "string"
+        },
+        "floors": {
+          "items": {
+            "$ref": "#/$defs/Floor"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -131,6 +137,46 @@
         "loc"
       ],
       "title": "District",
+      "type": "object"
+    },
+    "Floor": {
+      "additionalProperties": false,
+      "description": "One function, drawn as a slab of the building it lives in.\n\n`y` and `height` are computed server-side so the stack stays deterministic and testable\nalongside the rest of the layout.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "cc": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "grade": {
+          "enum": [
+            "clean",
+            "watch",
+            "hot",
+            "critical"
+          ],
+          "type": "string"
+        },
+        "y": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "cc",
+        "line",
+        "grade",
+        "y",
+        "height"
+      ],
+      "title": "Floor",
       "type": "object"
     },
     "Footprint": {

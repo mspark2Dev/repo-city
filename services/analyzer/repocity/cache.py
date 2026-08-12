@@ -15,26 +15,34 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 
-@lru_cache(maxsize=1)
-def analyzer_fingerprint() -> str:
-    """Hash of the analyzer's own source.
-
-    The cache key is mtime and size, which detects edits to the *analyzed* files but not to
-    the code doing the analyzing. Without this, changing how a metric is computed silently
-    serves the old numbers forever — the kind of bug you only notice when a value looks
-    wrong months later. Hashing the package makes the cache invalidate itself.
-    """
+def _hash_package() -> str:
     digest = hashlib.sha1()
     package = Path(__file__).parent
     for source in sorted(package.rglob("*.py")) + sorted(package.rglob("*.json")):
         digest.update(source.relative_to(package).as_posix().encode())
         digest.update(source.read_bytes())
     return digest.hexdigest()[:16]
+
+
+_FINGERPRINT = _hash_package()
+"""Computed at import, so it describes the code this process is actually running.
+
+The cache key is mtime and size, which detects edits to the *analyzed* files but not to the
+code doing the analyzing. Without this, changing how a metric is computed silently serves
+the old numbers forever — the kind of bug you only notice when a value looks wrong months
+later.
+
+Reading the files lazily instead would let a long-lived process stamp entries with a hash
+of source it never loaded: edit a file under a running server and it writes results from
+the old code under the new code's fingerprint, which then look valid to everyone."""
+
+
+def analyzer_fingerprint() -> str:
+    return _FINGERPRINT
 
 
 def cache_root() -> Path:

@@ -22,6 +22,7 @@ are the ones you notice first.
 |---|---|
 | A district | A directory |
 | A building | A file |
+| A slab in a building | A function, sized by its length and coloured by its complexity |
 | Building height | Lines of code |
 | Rusted concrete, red glow, smoke | High cyclomatic complexity |
 | Clean glass, blue neon | Low complexity |

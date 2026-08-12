@@ -27,6 +27,7 @@ from .schema import (
     Building,
     CityMap,
     District,
+    Floor,
     Footprint,
     Grade,
     Link,
@@ -69,6 +70,17 @@ carry the signals that matter most.
 BAND_CLEARANCE = 1.15
 """How much thicker than its widest building a district's file band must be."""
 
+MIN_FLOORS = 2
+"""A file with one function is that function; slicing it into one slab says nothing."""
+
+MAX_FLOORS = 60
+"""Beyond this a slab is thinner than a pixel at any useful camera distance."""
+
+FLOOR_GAP = 0.88
+"""Each slab fills this much of its slot, so floors read as stacked rather than fused."""
+
+MIN_FLOOR_HEIGHT = 0.05
+
 BUILDING_GAP = 0.15
 """Clearance between a building and its treemap cell, so neighbours never touch."""
 
@@ -110,7 +122,17 @@ def percentile(values: list[int], q: float) -> float:
 
 
 class _FileFacts:
-    __slots__ = ("file", "loc", "sloc", "comments", "functions", "classes", "cc", "imports")
+    __slots__ = (
+        "file",
+        "loc",
+        "sloc",
+        "comments",
+        "functions",
+        "classes",
+        "cc",
+        "imports",
+        "measured",
+    )
 
     def __init__(self, file: ScannedFile) -> None:
         self.file = file
@@ -121,6 +143,7 @@ class _FileFacts:
         self.classes = 0
         self.cc = (0, 0.0)
         self.imports: list[ImportSpec] = []
+        self.measured: list[tuple[str, int, int, int]] = []
 
     @property
     def symbols(self) -> int:
@@ -136,6 +159,7 @@ class _FileFacts:
             "maxCC": self.cc[0],
             "avgCC": self.cc[1],
             "imports": [[i.module, i.level] for i in self.imports],
+            "functions_detail": self.measured,
         }
 
     def load_cache(self, data: dict) -> None:
@@ -146,6 +170,7 @@ class _FileFacts:
         self.classes = data["classes"]
         self.cc = (data["maxCC"], data["avgCC"])
         self.imports = [ImportSpec(module, level) for module, level in data["imports"]]
+        self.measured = [tuple(f) for f in data.get("functions_detail", [])]
 
 
 def _analyze_file(file: ScannedFile) -> _FileFacts:
@@ -158,6 +183,7 @@ def _analyze_file(file: ScannedFile) -> _FileFacts:
 
     measured = complexity_of(file.abs_path, text)
     facts.cc = (measured.max_cc, measured.avg_cc)
+    facts.measured = [(fn.name, fn.cc, fn.line, fn.lines) for fn in measured.functions]
 
     parsed = parse_source(raw, file.lang)
     # Docstrings are documentation, so they move from the code tally to the comment tally.
@@ -388,6 +414,7 @@ def _building(
     assert item.rect is not None
     path = item.key
     max_cc, avg_cc = facts.cc
+    height = height_for(facts.loc, p95)
     side = max(
         min(footprint_for(facts.symbols), item.rect.w - BUILDING_GAP, item.rect.d - BUILDING_GAP),
         MIN_VISIBLE_FOOTPRINT,
@@ -404,7 +431,7 @@ def _building(
             z=round(item.rect.z + item.rect.d / 2, 3),
         ),
         footprint=Footprint(w=round(side, 3), d=round(side, 3)),
-        height=height_for(facts.loc, p95),
+        height=height,
         metrics=Metrics(
             loc=facts.loc,
             sloc=facts.sloc,
@@ -419,7 +446,46 @@ def _building(
             fan_out=fan_out.get(path, 0),
         ),
         grade=grade_for(max_cc),
+        floors=floors_for(facts.measured, facts.loc, height),
     )
+
+
+def floors_for(
+    facts_measured: list[tuple[str, int, int, int]], loc: int, height: float
+) -> list[Floor]:
+    """Lay the file's functions out vertically in the order they appear in the source.
+
+    A building becomes a readable section through its own file: each function is a slab
+    sized by its length and coloured by its complexity, and the lines between them — the
+    imports, fields, and class scaffolding — stay as unlit gaps.
+    """
+    if len(facts_measured) < MIN_FLOORS or loc <= 0 or height <= 0:
+        return []
+
+    ordered = sorted(facts_measured, key=lambda fn: fn[2])[:MAX_FLOORS]
+    per_line = height / loc
+    floors: list[Floor] = []
+
+    for name, cc, line, lines in ordered:
+        base = min((line - 1) * per_line, height)
+        # A function may be reported as running past the last line this counted — the two
+        # tools disagree on what a line is for some files — so the slab is clipped to the
+        # building rather than allowed to poke out of the roof.
+        slot = min(max(lines, 1) * per_line, height - base)
+        thickness = max(slot * FLOOR_GAP, MIN_FLOOR_HEIGHT)
+        if base + thickness > height:
+            base = max(height - thickness, 0.0)
+        floors.append(
+            Floor(
+                name=name,
+                cc=cc,
+                line=line,
+                grade=grade_for(cc),
+                y=round(base, 3),
+                height=round(thickness, 3),
+            )
+        )
+    return floors
 
 
 def _links(edges: dict[tuple[str, str], int]) -> list[Link]:

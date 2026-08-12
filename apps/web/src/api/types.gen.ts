@@ -78,6 +78,7 @@ export interface Building {
   height: number;
   metrics: Metrics;
   grade: 'clean' | 'watch' | 'hot' | 'critical';
+  floors?: Floor[];
 }
 export interface Point {
   x: number;
@@ -99,6 +100,20 @@ export interface Metrics {
   ccDensity: number;
   fanIn: number;
   fanOut: number;
+}
+/**
+ * One function, drawn as a slab of the building it lives in.
+ *
+ * `y` and `height` are computed server-side so the stack stays deterministic and testable
+ * alongside the rest of the layout.
+ */
+export interface Floor {
+  name: string;
+  cc: number;
+  line: number;
+  grade: 'clean' | 'watch' | 'hot' | 'critical';
+  y: number;
+  height: number;
 }
 export interface Unresolved {
   from: string;
