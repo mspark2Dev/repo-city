@@ -39,6 +39,7 @@ interface CityState {
   selectedFloor: number | null
   detail: FileDetail | null
   hovered: string | null
+  shadowsEnabled: boolean
 
   progress: { done: number; total: number } | null
   cloning: string | null
@@ -60,6 +61,7 @@ interface CityState {
   load: (path: string) => Promise<void>
   select: (buildingId: string | null, floorIndex?: number | null) => Promise<void>
   hover: (id: string | null) => void
+  setShadowsEnabled: (on: boolean) => void
   refactor: (instruction: string) => Promise<void>
   toggleBaseline: () => void
   applyProposal: () => Promise<void>
@@ -78,6 +80,7 @@ export const useCityStore = create<CityState>((set, get) => ({
   selectedFloor: null,
   detail: null,
   hovered: null,
+  shadowsEnabled: true,
   progress: null,
   cloning: null,
   origin: null,
@@ -164,6 +167,10 @@ export const useCityStore = create<CityState>((set, get) => ({
   },
 
   hover: (id) => set({ hovered: id }),
+
+  setShadowsEnabled: (on) => {
+    if (get().shadowsEnabled !== on) set({ shadowsEnabled: on })
+  },
 
   refactor: async (instruction) => {
     const { projectId, selected } = get()

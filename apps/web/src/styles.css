@@ -603,3 +603,23 @@ ul.floors .ln {
   color: var(--muted);
   flex: none;
 }
+
+.stats {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  background: rgba(10, 13, 19, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 8px 11px;
+  pointer-events: none;
+}
+
+.stats b {
+  color: var(--text);
+  font-size: 13px;
+}

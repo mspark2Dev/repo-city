@@ -4,6 +4,7 @@ import { LocaleToggle } from './i18n/LocaleToggle'
 import { CommandBar } from './panels/CommandBar'
 import { Inspector } from './panels/Inspector'
 import { CityCanvas } from './scene/CityCanvas'
+import { StatsReadout } from './scene/Stats'
 import { useCityStore } from './store'
 
 const DEFAULT_PATH = '../../fixtures/sample-project'
@@ -69,6 +70,7 @@ export function App() {
         </div>
 
         <LocaleToggle />
+        <StatsReadout />
         <Progress />
         {status === 'error' && <div className="error">{error}</div>}
         <CommandBar />

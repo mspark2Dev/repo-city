@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CatmullRomCurve3, CubicBezierCurve3, Vector3 } from 'three'
+import { CatmullRomCurve3, Color, CubicBezierCurve3, Vector3 } from 'three'
 import type { Building, CityMap } from '../api/types.gen'
 import { useCityStore } from '../store'
 
@@ -79,29 +79,61 @@ function CycleArc({ arc }: { arc: Arc }) {
   )
 }
 
+/**
+ * Every thin arc in one geometry.
+ *
+ * Drawn as a line object each, a few hundred imports become a few hundred draw calls and
+ * the frame budget goes to bookkeeping. Merged into one buffer with a colour per vertex,
+ * they cost one.
+ */
+function ArcBundle({ arcs }: { arcs: Arc[] }) {
+  const { positions, colors } = useMemo(() => {
+    const segments = arcs.reduce((n, arc) => n + arc.points.length - 1, 0)
+    const positions = new Float32Array(segments * 6)
+    const colors = new Float32Array(segments * 6)
+    const tint = new Color()
+    let at = 0
+
+    for (const arc of arcs) {
+      tint.set(arc.color).multiplyScalar(arc.active ? 1 : 0.35)
+      for (let i = 0; i < arc.points.length - 1; i++) {
+        const a = arc.points[i]
+        const b = arc.points[i + 1]
+        positions.set([a.x, a.y, a.z, b.x, b.y, b.z], at)
+        colors.set([tint.r, tint.g, tint.b, tint.r, tint.g, tint.b], at)
+        at += 6
+      }
+    }
+    return { positions, colors }
+  }, [arcs])
+
+  if (positions.length === 0) return null
+
+  return (
+    <lineSegments>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+      </bufferGeometry>
+      <lineBasicMaterial vertexColors transparent opacity={0.75} />
+    </lineSegments>
+  )
+}
+
 export function Links() {
   const city = useCityStore((s) => s.city)
   const focus = useCityStore((s) => s.selected?.id ?? s.hovered ?? null)
 
   const arcs = useMemo(() => (city ? selectArcs(city, focus) : []), [city, focus])
+  const cycles = useMemo(() => arcs.filter((arc) => arc.cyclic), [arcs])
+  const thin = useMemo(() => arcs.filter((arc) => !arc.cyclic), [arcs])
 
   return (
     <group>
-      {arcs.map((arc) =>
-        arc.cyclic ? (
-          <CycleArc key={arc.id} arc={arc} />
-        ) : (
-          <line key={arc.id}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[new Float32Array(arc.points.flatMap((p) => [p.x, p.y, p.z])), 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color={arc.color} transparent opacity={arc.active ? 0.9 : 0.22} />
-          </line>
-        ),
-      )}
+      <ArcBundle arcs={thin} />
+      {cycles.map((arc) => (
+        <CycleArc key={arc.id} arc={arc} />
+      ))}
     </group>
   )
 }

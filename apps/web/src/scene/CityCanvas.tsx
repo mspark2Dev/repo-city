@@ -9,6 +9,7 @@ import { Controls } from './Controls'
 import { Districts } from './Districts'
 import { Explosion } from './Explosion'
 import { Links } from './Links'
+import { StatsInCanvas } from './Stats'
 import { Smoke } from './Smoke'
 import { GROUND } from './palette'
 
@@ -27,11 +28,12 @@ function Ground() {
 
 export function CityCanvas() {
   const status = useCityStore((s) => s.status)
+  const shadows = useCityStore((s) => s.shadowsEnabled)
   const clearSelection = useCityStore((s) => s.select)
 
   return (
     <Canvas
-      shadows
+      shadows={shadows}
       camera={{ position: [22, 20, 22], fov: 45, near: 0.1, far: 500 }}
       onPointerMissed={() => void clearSelection(null)}
     >
@@ -41,8 +43,8 @@ export function CityCanvas() {
       <directionalLight
         position={[18, 30, 12]}
         intensity={1.1}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
+        castShadow={shadows}
+        shadow-mapSize={[1024, 1024]}
       />
       <hemisphereLight args={['#3E5A7A', '#0B0E14', 0.4]} />
 
@@ -56,6 +58,7 @@ export function CityCanvas() {
             <Links />
             <Smoke />
             <Explosion />
+            <StatsInCanvas />
           </>
         )}
       </Suspense>

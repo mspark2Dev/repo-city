@@ -10,6 +10,10 @@ import { slabsOf, type Slab } from './slabs'
 const dummy = new Object3D()
 const scratchColor = new Color()
 
+const COLOR_STEP = 0.18
+const COLOR_SETTLED = 0.004
+/** Below this distance the eye cannot tell, so the colour snaps and the work stops. */
+
 /** Overshoot-and-settle, so a new building arrives with some weight behind it. */
 function spring(t: number): number {
   if (t >= 1) return 1
@@ -35,6 +39,7 @@ interface GroupProps {
   grade: Grade
   slabs: Slab[]
   transitions: Map<string, Transition>
+  shadows: boolean
   ghost?: boolean
 }
 
@@ -42,7 +47,7 @@ interface GroupProps {
  * One InstancedMesh per grade. Floors join the same four meshes as whole buildings, so a
  * city drawn as stacks costs the same handful of draw calls as one drawn as bars.
  */
-function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
+function GradeGroup({ grade, slabs, transitions, shadows, ghost = false }: GroupProps) {
   const mesh = useRef<InstancedMesh>(null)
   const select = useCityStore((s) => s.select)
   const hover = useCityStore((s) => s.hover)
@@ -51,6 +56,11 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
 
   const base = useMemo(() => new Color(GRADE_COLOR[grade]), [grade])
   const material = useMemo(() => materialFor(grade), [grade])
+
+  // Only the instances whose colour is still moving. Scanning every instance each frame
+  // meant walking the whole city and re-uploading its colour buffer forever, because an
+  // eased colour approaches its target without ever equalling it.
+  const animating = useRef<Set<number>>(new Set())
 
   const writeMatrices = (now: number) => {
     const instanced = mesh.current
@@ -61,7 +71,7 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
       const height = Math.max(slab.height * scale, 0.001)
       dummy.position.set(slab.x, slab.baseY * scale + height / 2, slab.z)
       dummy.scale.set(slab.width, height, slab.depth)
-      dummy.rotation.set(0, 0, 0)
+      dummy.rotation.set(slab.tilt, slab.spin, slab.tilt * 0.7)
       dummy.updateMatrix()
       instanced.setMatrixAt(index, dummy.matrix)
     })
@@ -76,6 +86,7 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
 
     writeMatrices(performance.now())
     slabs.forEach((_, index) => instanced.setColorAt(index, base))
+    animating.current.clear()
     if (instanced.instanceColor) instanced.instanceColor.needsUpdate = true
 
     // Raycasting rejects against the bounding volume first, and the one computed at mount
@@ -84,6 +95,31 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
     instanced.computeBoundingBox()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slabs, base])
+
+  const targetFor = (slab: Slab): Color =>
+    slab.buildingId === selectedId
+      ? SELECTED_COLOR
+      : slab.buildingId === hoveredId
+        ? HOVER_COLOR
+        : base
+
+  // A highlight touches a handful of slabs, so the ones to animate are found when the
+  // selection changes rather than searched for on every frame.
+  useEffect(() => {
+    slabs.forEach((slab, index) => {
+      if (slab.buildingId === selectedId || slab.buildingId === hoveredId) {
+        animating.current.add(index)
+      }
+    })
+    const instanced = mesh.current
+    if (!instanced?.instanceColor) return
+    slabs.forEach((slab, index) => {
+      if (animating.current.has(index)) return
+      instanced.getColorAt(index, scratchColor)
+      if (!scratchColor.equals(targetFor(slab))) animating.current.add(index)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, hoveredId, slabs])
 
   useFrame((state) => {
     const instanced = mesh.current
@@ -99,24 +135,31 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
       ;(instanced.material as MeshStandardMaterial).emissiveIntensity = glow
     }
 
-    let dirty = false
-    slabs.forEach((slab, index) => {
-      const target =
-        slab.buildingId === selectedId
-          ? SELECTED_COLOR
-          : slab.buildingId === hoveredId
-            ? HOVER_COLOR
-            : base
-      instanced.getColorAt(index, scratchColor)
-      if (!scratchColor.equals(target)) {
-        // Colour eases rather than snapping: a building going from red to blue is the
-        // whole point of the refactoring, and a hard cut reads as a glitch.
-        scratchColor.lerp(target, 0.12)
-        instanced.setColorAt(index, scratchColor)
-        dirty = true
+    if (animating.current.size === 0) return
+
+    for (const index of [...animating.current]) {
+      const slab = slabs[index]
+      if (!slab) {
+        animating.current.delete(index)
+        continue
       }
-    })
-    if (dirty) instanced.instanceColor.needsUpdate = true
+      const target = targetFor(slab)
+      instanced.getColorAt(index, scratchColor)
+      // Colour eases rather than snapping: a building going from red to blue is the whole
+      // point of a refactoring, and a hard cut reads as a glitch.
+      scratchColor.lerp(target, COLOR_STEP)
+      if (
+        Math.abs(scratchColor.r - target.r) +
+          Math.abs(scratchColor.g - target.g) +
+          Math.abs(scratchColor.b - target.b) <
+        COLOR_SETTLED
+      ) {
+        scratchColor.copy(target)
+        animating.current.delete(index)
+      }
+      instanced.setColorAt(index, scratchColor)
+    }
+    instanced.instanceColor.needsUpdate = true
   })
 
   if (slabs.length === 0) return null
@@ -128,8 +171,8 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
     <instancedMesh
       ref={mesh}
       args={[undefined, undefined, slabs.length]}
-      castShadow
-      receiveShadow
+      castShadow={shadows}
+      receiveShadow={shadows}
       material={material}
       onPointerMove={
         ghost
@@ -166,8 +209,11 @@ function GradeGroup({ grade, slabs, transitions, ghost = false }: GroupProps) {
   )
 }
 
+export const SHADOW_LIMIT = 2500
+
 export function Buildings() {
   const live = useCityStore((s) => s.city)
+  const setShadowsEnabled = useCityStore((s) => s.setShadowsEnabled)
   const baseline = useCityStore((s) => s.baseline)
   const showBaseline = useCityStore((s) => s.showBaseline)
   const ghosts = useCityStore((s) => s.ghosts)
@@ -198,6 +244,16 @@ export function Buildings() {
     return groups
   }, [ghosts, showBaseline, city])
 
+  const total = useMemo(
+    () => GRADES.reduce((n, g) => n + (byGrade.get(g)?.length ?? 0), 0),
+    [byGrade],
+  )
+  // Shadows re-render every slab into a depth map each frame. On a small city that is
+  // free and the depth reads nicely; past a few thousand it is the frame budget.
+  const shadows = total <= SHADOW_LIMIT
+
+  useEffect(() => setShadowsEnabled(shadows), [shadows, setShadowsEnabled])
+
   if (!city) return null
 
   return (
@@ -208,6 +264,7 @@ export function Buildings() {
           grade={grade}
           slabs={byGrade.get(grade) ?? []}
           transitions={transitions}
+          shadows={shadows}
         />
       ))}
       {GRADES.map((grade) => (
@@ -216,6 +273,7 @@ export function Buildings() {
           grade={grade}
           slabs={ghostsByGrade.get(grade) ?? []}
           transitions={transitions}
+          shadows={false}
           ghost
         />
       ))}

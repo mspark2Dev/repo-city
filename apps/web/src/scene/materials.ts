@@ -1,5 +1,6 @@
-import { MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
+import { MeshStandardMaterial, type Material } from 'three'
 import { GRADE_COLOR, type Grade } from './palette'
+import { windowTexture } from './windows'
 
 /**
  * Material per grade, so a building's condition reads before you can see its colour:
@@ -9,22 +10,31 @@ function build(grade: Grade): Material {
   const color = GRADE_COLOR[grade]
 
   if (grade === 'clean') {
-    return new MeshPhysicalMaterial({
+    // Glass without transmission. A physical material's refraction re-renders the whole
+    // scene into a transmission target every frame, and clean code is most of a healthy
+    // city — so the city was being drawn twice. Low roughness and a lit edge read the
+    // same at the distance a skyline is seen from.
+    return new MeshStandardMaterial({
       color,
-      roughness: 0.12,
-      metalness: 0.1,
-      transmission: 0.35,
-      thickness: 1.2,
-      ior: 1.35,
+      roughness: 0.15,
+      metalness: 0.35,
       emissive: color,
-      emissiveIntensity: 0.28,
+      emissiveIntensity: 0.22,
+      emissiveMap: windowTexture('lit'),
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.9,
     })
   }
 
   if (grade === 'watch') {
-    return new MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.12 })
+    return new MeshStandardMaterial({
+      color,
+      roughness: 0.55,
+      metalness: 0.12,
+      emissive: color,
+      emissiveIntensity: 0.16,
+      emissiveMap: windowTexture('dim'),
+    })
   }
 
   if (grade === 'hot') {
@@ -34,9 +44,11 @@ function build(grade: Grade): Material {
       metalness: 0.04,
       emissive: color,
       emissiveIntensity: 0.12,
+      emissiveMap: windowTexture('dark'),
     })
   }
 
+  // Nothing lit is left in a critical building: the windows are out.
   return new MeshStandardMaterial({
     color,
     roughness: 0.97,
