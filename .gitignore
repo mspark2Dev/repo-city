@@ -1,0 +1,37 @@
+# Runtime artifacts
+.epocity/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Generated
+apps/web/src/api/types.gen.ts
+
+# Env
+.env
+.env.local
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Agent tooling
+.omc/
+.claude/
+
+# Origin idea note, kept local
+notes
