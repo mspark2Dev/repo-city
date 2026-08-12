@@ -19,6 +19,17 @@ _GRAMMAR: dict[Lang, str] = {
     "python": "python",
     "typescript": "tsx",
     "javascript": "javascript",
+    "java": "java",
+    "go": "go",
+    "rust": "rust",
+    "c": "c",
+    "cpp": "cpp",
+    "csharp": "csharp",
+    "ruby": "ruby",
+    "php": "php",
+    "kotlin": "kotlin",
+    "swift": "swift",
+    "scala": "scala",
 }
 
 _FUNCTION_NODES = frozenset(
@@ -29,10 +40,43 @@ _FUNCTION_NODES = frozenset(
         "method_definition",
         "arrow_function",
         "generator_function_declaration",
+        "method_declaration",
+        "constructor_declaration",
+        "function_item",
+        "function_declarator",
+        "local_function_statement",
+        "singleton_method",
+        "method",
+        "anonymous_function",
+        "func_literal",
+        "closure_expression",
+        "lambda_expression",
+        "lambda_literal",
+        "init_declaration",
     }
 )
 
-_CLASS_NODES = frozenset({"class_definition", "class_declaration"})
+_CLASS_NODES = frozenset(
+    {
+        "class_definition",
+        "class_declaration",
+        "class_specifier",
+        "interface_declaration",
+        "enum_declaration",
+        "enum_specifier",
+        "record_declaration",
+        "struct_specifier",
+        "struct_item",
+        "struct_declaration",
+        "trait_item",
+        "trait_declaration",
+        "trait_definition",
+        "impl_item",
+        "protocol_declaration",
+        "type_declaration",
+        "module",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +139,10 @@ def _walk(node: Node, src: bytes, lang: Lang, out: ParsedFile) -> None:
         out.classes += 1
     elif lang == "python":
         _python_import(node, src, out)
+    elif lang in ("java", "kotlin"):
+        _java_import(node, src, out)
+    elif lang in ("c", "cpp"):
+        _include(node, src, out)
     else:
         _js_import(node, src, out)
 
@@ -167,6 +215,27 @@ def _python_import(node: Node, src: bytes, out: ParsedFile) -> None:
             out.imports.append(ImportSpec(_text(dotted, src) if dotted else "", level))
         else:
             out.imports.append(ImportSpec(_text(module, src)))
+
+
+def _java_import(node: Node, src: bytes, out: ParsedFile) -> None:
+    if node.type not in ("import_declaration", "import_header"):
+        return
+    text = _text(node, src).strip().rstrip(";")
+    text = text.removeprefix("import").strip().removeprefix("static").strip()
+    if text:
+        out.imports.append(ImportSpec(text))
+
+
+def _include(node: Node, src: bytes, out: ParsedFile) -> None:
+    """`#include "x.h"` names a file; `<x.h>` names a system header, which is external."""
+    if node.type != "preproc_include":
+        return
+    path = node.child_by_field_name("path")
+    if path is None:
+        return
+    text = _text(path, src)
+    if text.startswith('"'):
+        out.imports.append(ImportSpec(text.strip('"')))
 
 
 def _js_import(node: Node, src: bytes, out: ParsedFile) -> None:

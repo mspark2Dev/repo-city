@@ -20,6 +20,17 @@
             "python",
             "typescript",
             "javascript",
+            "java",
+            "go",
+            "rust",
+            "c",
+            "cpp",
+            "csharp",
+            "ruby",
+            "php",
+            "kotlin",
+            "swift",
+            "scala",
             "other"
           ],
           "type": "string"

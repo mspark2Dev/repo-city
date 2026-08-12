@@ -291,8 +291,21 @@ ref 마다 별도 체크아웃을 둔다. 브랜치를 오가며 서로의 작�
 ## 5. 정적 분석 파이프라인
 
 - **파서:** `tree-sitter` + `tree-sitter-language-pack` (언어별 빌드 불필요)
-- **MVP 언어:** Python, TypeScript/TSX, JavaScript/JSX. 그 외 확장자는 LOC 만 집계하고
-  `lang: "other"` 로 회색 건물 처리 (도시에서 사라지지 않게)
+- **지원 언어:** 두 단계로 나뉜다. 언어별 비용이 다르기 때문이다 — 메트릭은 문법만 있으면
+  되지만, 의존 그래프는 언어마다 모듈 해석 규칙을 따로 구현해야 한다.
+
+  | 단계 | 언어 | 얻는 것 |
+  |---|---|---|
+  | 전체 | Python, TypeScript/TSX, JavaScript, Java, Kotlin, C, C++ | 크기·복잡도·심볼 + **의존 그래프** |
+  | 메트릭 | Go, Rust, C#, Ruby, PHP, Swift, Scala | 크기·복잡도·심볼 |
+  | LOC 만 | 그 외 텍스트 파일 | 라인 수 (`lang: "other"`, 회색 건물) |
+
+  의존 해석 방식: Python 상대·절대 import / TS·JS `tsconfig` 별칭 / Java·Kotlin 은 정규화된
+  클래스명을 경로 접미사로 매칭 / C·C++ 는 따옴표 `#include` 를 상대·include 루트 기준으로 매칭.
+
+  **[결정 11] 문법 노드 이름은 추측하지 않는다.** `cc_rules.json` 이 그 문법에 없는 노드를
+  가리키면 복잡도가 조용히 1 로 나오고, 도시는 균일하게 깨끗해 보인다. 실제로 확인한 이름만
+  넣고, 언어마다 분기가 여럿인 스니펫으로 **CC ≥ 4 를 테스트로 고정**한다 (`test_languages.py`).
 - **LOC:** 전체 라인 / `sloc`(주석·공백 제외) / 주석 라인 분리 집계.
   Python docstring 은 AST 로 찾아 주석으로 집계한다. `#` 만 세면 잘 문서화된 파이썬 파일이
   주석 0 으로 나온다

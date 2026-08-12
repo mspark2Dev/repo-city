@@ -15,7 +15,23 @@ from pydantic.alias_generators import to_camel
 SCHEMA_VERSION = "1.0"
 
 Grade = Literal["clean", "watch", "hot", "critical"]
-Lang = Literal["python", "typescript", "javascript", "other"]
+Lang = Literal[
+    "python",
+    "typescript",
+    "javascript",
+    "java",
+    "go",
+    "rust",
+    "c",
+    "cpp",
+    "csharp",
+    "ruby",
+    "php",
+    "kotlin",
+    "swift",
+    "scala",
+    "other",
+]
 
 
 class Model(BaseModel):

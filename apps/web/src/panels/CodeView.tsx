@@ -1,10 +1,21 @@
 import Editor from '@monaco-editor/react'
 import { useCityStore } from '../store'
 
-const MONACO_LANG: Record<string, string> = {
+export const MONACO_LANG: Record<string, string> = {
   python: 'python',
   typescript: 'typescript',
   javascript: 'javascript',
+  java: 'java',
+  go: 'go',
+  rust: 'rust',
+  c: 'c',
+  cpp: 'cpp',
+  csharp: 'csharp',
+  ruby: 'ruby',
+  php: 'php',
+  kotlin: 'kotlin',
+  swift: 'swift',
+  scala: 'scala',
   other: 'plaintext',
 }
 

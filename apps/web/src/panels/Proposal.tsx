@@ -2,12 +2,7 @@ import { DiffEditor } from '@monaco-editor/react'
 import { useT } from '../i18n'
 import { useCityStore } from '../store'
 
-const MONACO_LANG: Record<string, string> = {
-  python: 'python',
-  typescript: 'typescript',
-  javascript: 'javascript',
-  other: 'plaintext',
-}
+import { MONACO_LANG } from './CodeView'
 
 /** Nothing is written until Apply is pressed; this view is the point of that split. */
 export function Proposal() {

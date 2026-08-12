@@ -15,6 +15,17 @@ _LINE_COMMENT: dict[Lang, tuple[str, ...]] = {
     "python": ("#",),
     "typescript": ("//",),
     "javascript": ("//",),
+    "java": ("//",),
+    "go": ("//",),
+    "rust": ("//",),
+    "c": ("//",),
+    "cpp": ("//",),
+    "csharp": ("//",),
+    "kotlin": ("//",),
+    "swift": ("//",),
+    "scala": ("//",),
+    "ruby": ("#",),
+    "php": ("//", "#"),
     "other": ("#", "//"),
 }
 

@@ -44,7 +44,22 @@ export interface Building {
   districtId: string;
   path: string;
   name: string;
-  lang: 'python' | 'typescript' | 'javascript' | 'other';
+  lang:
+    | 'python'
+    | 'typescript'
+    | 'javascript'
+    | 'java'
+    | 'go'
+    | 'rust'
+    | 'c'
+    | 'cpp'
+    | 'csharp'
+    | 'ruby'
+    | 'php'
+    | 'kotlin'
+    | 'swift'
+    | 'scala'
+    | 'other';
   position: Point;
   footprint: Footprint;
   height: number;

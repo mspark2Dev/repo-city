@@ -150,6 +150,18 @@ Select a building, type an instruction in the bar at the bottom, and read the di
 deciding. Nothing is written until you press Apply, the originals are snapshotted outside
 your repository, and Revert restores them byte for byte.
 
+## Languages
+
+| | |
+|---|---|
+| Size, complexity, symbols **and imports** | Python, TypeScript, JavaScript, Java, Kotlin, C, C++ |
+| Size, complexity, symbols | Go, Rust, C#, Ruby, PHP, Swift, Scala |
+| Lines only | everything else it can read |
+
+Metrics need only a grammar; a dependency graph needs that language's module rules written
+out, which is why the two lists differ. The panel reports what share of imports resolved,
+so the gap is visible rather than implied.
+
 ## Requirements
 
 - Node.js 22.13+ (pnpm 11 requires it) and pnpm 11+
