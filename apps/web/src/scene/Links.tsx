@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CubicBezierCurve3, Vector3 } from 'three'
+import { CatmullRomCurve3, CubicBezierCurve3, Vector3 } from 'three'
 import type { Building, CityMap } from '../api/types.gen'
 import { useCityStore } from '../store'
 
@@ -11,6 +11,7 @@ interface Arc {
   points: Vector3[]
   color: string
   active: boolean
+  cyclic: boolean
 }
 
 function topOf(building: Building, districtY: Map<string, number>): Vector3 {
@@ -58,9 +59,24 @@ function selectArcs(city: CityMap, focusId: string | null): Arc[] {
       points: curve(topOf(source, districtY), topOf(target, districtY)),
       color: link.bidirectional ? '#FF3B30' : touchesFocus ? '#7FD4FF' : '#3A4C6B',
       active: touchesFocus || link.bidirectional,
+      cyclic: link.bidirectional,
     })
   }
   return arcs
+}
+
+/**
+ * Circular dependencies are drawn as tubes rather than lines: WebGL ignores lineWidth on
+ * every major platform, so a defect that is supposed to look heavy would render hairline.
+ */
+function CycleArc({ arc }: { arc: Arc }) {
+  const curve = useMemo(() => new CatmullRomCurve3(arc.points), [arc.points])
+  return (
+    <mesh>
+      <tubeGeometry args={[curve, 32, 0.075, 6, false]} />
+      <meshBasicMaterial color={arc.color} transparent opacity={0.85} />
+    </mesh>
+  )
 }
 
 export function Links() {
@@ -71,21 +87,21 @@ export function Links() {
 
   return (
     <group>
-      {arcs.map((arc) => (
-        <line key={arc.id}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[new Float32Array(arc.points.flatMap((p) => [p.x, p.y, p.z])), 3]}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial
-            color={arc.color}
-            transparent
-            opacity={arc.active ? 0.9 : 0.25}
-          />
-        </line>
-      ))}
+      {arcs.map((arc) =>
+        arc.cyclic ? (
+          <CycleArc key={arc.id} arc={arc} />
+        ) : (
+          <line key={arc.id}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                args={[new Float32Array(arc.points.flatMap((p) => [p.x, p.y, p.z])), 3]}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color={arc.color} transparent opacity={arc.active ? 0.9 : 0.22} />
+          </line>
+        ),
+      )}
     </group>
   )
 }

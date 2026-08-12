@@ -1,0 +1,10 @@
+{
+  // Alias setup mirrors what a typical Vite + React project ships with.
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "~lib": ["lib/index.ts"],
+    },
+  },
+}

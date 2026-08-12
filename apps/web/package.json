@@ -10,8 +10,10 @@
     "gen:types": "json2ts citymap.schema.json src/api/types.gen.ts --additionalProperties false --style.singleQuote"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^10.7.0",
     "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.0.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.170.0",

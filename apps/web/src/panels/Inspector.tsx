@@ -1,5 +1,11 @@
 import { useCityStore } from '../store'
 import { GRADE_COLOR } from '../scene/palette'
+import { CodeView } from './CodeView'
+
+function resolvedShare(stats: { links: number; unresolved: number }): number {
+  const total = stats.links + stats.unresolved
+  return total === 0 ? 100 : Math.round((stats.links / total) * 100)
+}
 
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
@@ -24,8 +30,16 @@ export function Inspector() {
         <Row label="files" value={city.stats.files} />
         <Row label="lines" value={city.stats.loc.toLocaleString()} />
         <Row label="imports resolved" value={city.stats.links} />
-        <Row label="unresolved" value={city.stats.unresolved} />
-        <p className="hint">Click a building to inspect it.</p>
+        <Row
+          label="unresolved imports"
+          value={`${city.stats.unresolved} (${resolvedShare(city.stats)}% resolved)`}
+        />
+        <p className="hint">
+          Unresolved specifiers are packages or paths this analyzer could not map to a file.
+          They are excluded from the graph, so this share is how much of the dependency
+          picture you are actually seeing.
+        </p>
+        <p className="hint">Click a building to inspect it. Double-click to fly to it.</p>
       </div>
     )
   }
@@ -64,7 +78,7 @@ export function Inspector() {
           </ul>
 
           <h3>Source</h3>
-          <pre>{detail.source.split('\n').slice(0, 200).join('\n')}</pre>
+          <CodeView />
         </>
       )}
     </div>

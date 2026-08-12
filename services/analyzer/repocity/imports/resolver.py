@@ -11,6 +11,7 @@ from pathlib import PurePosixPath
 
 from ..parse import ImportSpec
 from ..scan import ScannedFile
+from .tsconfig import AliasTable
 
 _PY_SUFFIXES = (".py", ".pyi")
 _JS_SUFFIXES = (".ts", ".tsx", ".d.ts", ".js", ".jsx", ".mjs", ".cjs")
@@ -36,7 +37,9 @@ class ResolvedImports:
 
 
 def resolve_imports(
-    files: list[ScannedFile], parsed: dict[str, list[ImportSpec]]
+    files: list[ScannedFile],
+    parsed: dict[str, list[ImportSpec]],
+    aliases: AliasTable | None = None,
 ) -> ResolvedImports:
     index = {f.rel_path: f for f in files}
     out = ResolvedImports()
@@ -49,7 +52,7 @@ def resolve_imports(
             if source_file.lang == "python":
                 target = _resolve_python(rel_path, spec, index)
             else:
-                target = _resolve_js(rel_path, spec, index)
+                target = _resolve_js(rel_path, spec, index, aliases)
 
             label = _spec_label(spec)
             if target is not None:
@@ -67,11 +70,13 @@ def _spec_label(spec: ImportSpec) -> str:
 
 
 def _looks_local(spec: ImportSpec) -> bool:
-    return spec.level > 0 or spec.module.startswith(".")
+    return spec.level > 0 or spec.module.startswith((".", "@/", "~/", "#"))
 
 
 def _candidates(base: PurePosixPath, suffixes: tuple[str, ...]) -> list[str]:
-    out = [f"{base}{suffix}" for suffix in suffixes]
+    # The bare path comes first: an alias may already name a concrete file.
+    out = [base.as_posix()]
+    out += [f"{base}{suffix}" for suffix in suffixes]
     out += [f"{base}/{stem}{suffix}" for stem in _INDEX_STEMS for suffix in suffixes]
     return out
 
@@ -99,12 +104,20 @@ def _resolve_python(rel_path: str, spec: ImportSpec, index: dict) -> str | None:
     return None
 
 
-def _resolve_js(rel_path: str, spec: ImportSpec, index: dict) -> str | None:
-    if not spec.module.startswith("."):
+def _resolve_js(
+    rel_path: str, spec: ImportSpec, index: dict, aliases: AliasTable | None
+) -> str | None:
+    if spec.module.startswith("."):
+        base = (PurePosixPath(rel_path).parent / spec.module).as_posix()
+        return _first_existing(_candidates(PurePosixPath(_normalize(base)), _JS_SUFFIXES), index)
+
+    if aliases is None:
         return None
-    base = (PurePosixPath(rel_path).parent / spec.module).as_posix()
-    normalized = PurePosixPath(_normalize(base))
-    return _first_existing(_candidates(normalized, _JS_SUFFIXES), index)
+    for candidate in aliases.expand(spec.module):
+        hit = _first_existing(_candidates(PurePosixPath(candidate), _JS_SUFFIXES), index)
+        if hit is not None:
+            return hit
+    return None
 
 
 def _normalize(path: str) -> str:

@@ -170,3 +170,9 @@ pre {
   overflow: auto;
   padding: 12px;
 }
+
+.code-view {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}

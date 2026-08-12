@@ -14,7 +14,9 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
+from .cache import FileCache
 from .imports import resolve_imports
+from .imports.tsconfig import load_aliases
 from .layout import DISTRICT_PADDING, SLACK, LayoutItem, depth_y, inset, split_rect, squarify
 from .metrics import count_loc
 from .parse import ImportSpec, parse_source
@@ -106,6 +108,27 @@ class _FileFacts:
     def symbols(self) -> int:
         return self.functions + self.classes
 
+    def to_cache(self) -> dict:
+        return {
+            "loc": self.loc,
+            "sloc": self.sloc,
+            "comments": self.comments,
+            "functions": self.functions,
+            "classes": self.classes,
+            "maxCC": self.cc[0],
+            "avgCC": self.cc[1],
+            "imports": [[i.module, i.level] for i in self.imports],
+        }
+
+    def load_cache(self, data: dict) -> None:
+        self.loc = data["loc"]
+        self.sloc = data["sloc"]
+        self.comments = data["comments"]
+        self.functions = data["functions"]
+        self.classes = data["classes"]
+        self.cc = (data["maxCC"], data["avgCC"])
+        self.imports = [ImportSpec(module, level) for module, level in data["imports"]]
+
 
 def _analyze_file(file: ScannedFile) -> _FileFacts:
     facts = _FileFacts(file)
@@ -116,6 +139,9 @@ def _analyze_file(file: ScannedFile) -> _FileFacts:
     facts.loc, facts.sloc, facts.comments = counts.loc, counts.sloc, counts.comments
 
     parsed = parse_source(raw, file.lang)
+    # Docstrings are documentation, so they move from the code tally to the comment tally.
+    facts.comments += parsed.doc_lines
+    facts.sloc = max(facts.sloc - parsed.doc_lines, 0)
     facts.functions = parsed.functions
     facts.classes = parsed.classes
     facts.cc = (parsed.cc.max_cc, parsed.cc.avg_cc)
@@ -134,14 +160,34 @@ def _directories(paths: list[str]) -> list[str]:
     return sorted(dirs)
 
 
-def build_city(root: Path, extra_excludes: tuple[str, ...] = ()) -> CityMap:
+def build_city(
+    root: Path, extra_excludes: tuple[str, ...] = (), *, use_cache: bool = True
+) -> CityMap:
     started = time.perf_counter()
     root = root.resolve()
 
     files = scan(root, extra_excludes)
-    facts = {f.rel_path: _analyze_file(f) for f in files}
+    cache = FileCache.load(root) if use_cache else None
 
-    resolved = resolve_imports(files, {p: f.imports for p, f in facts.items()})
+    facts: dict[str, _FileFacts] = {}
+    for file in files:
+        cached = cache.get(file.rel_path, file.mtime_ns, file.size) if cache else None
+        if cached is not None:
+            item = _FileFacts(file)
+            item.load_cache(cached)
+        else:
+            item = _analyze_file(file)
+            if cache:
+                cache.put(file.rel_path, file.mtime_ns, file.size, item.to_cache())
+        facts[file.rel_path] = item
+
+    if cache:
+        cache.prune(set(facts))
+        cache.save()
+
+    has_ts = any(f.lang in ("typescript", "javascript") for f in files)
+    aliases = load_aliases(root) if has_ts else None
+    resolved = resolve_imports(files, {p: f.imports for p, f in facts.items()}, aliases)
     fan_in: dict[str, int] = defaultdict(int)
     fan_out: dict[str, int] = defaultdict(int)
     for (source, target), weight in resolved.edges.items():

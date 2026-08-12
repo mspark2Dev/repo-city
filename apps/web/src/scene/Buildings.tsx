@@ -1,9 +1,10 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { Color, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three'
+import { Color, InstancedMesh, type MeshStandardMaterial, Matrix4, Object3D, Vector3 } from 'three'
 import type { Building } from '../api/types.gen'
 import { useCityStore } from '../store'
 import { GRADE_COLOR, GRADES, HOVER_COLOR, SELECTED_COLOR, type Grade } from './palette'
+import { materialFor, pulse } from './materials'
 
 const dummy = new Object3D()
 const scratchColor = new Color()
@@ -26,6 +27,7 @@ function GradeGroup({ grade, buildings, districtY }: GroupProps) {
   const hoveredId = useCityStore((s) => s.hovered)
 
   const base = useMemo(() => new Color(GRADE_COLOR[grade]), [grade])
+  const material = useMemo(() => materialFor(grade), [grade])
 
   useEffect(() => {
     const instanced = mesh.current
@@ -55,9 +57,14 @@ function GradeGroup({ grade, buildings, districtY }: GroupProps) {
     instanced.computeBoundingBox()
   }, [buildings, districtY, base])
 
-  useFrame(() => {
+  useFrame((state) => {
     const instanced = mesh.current
     if (!instanced || !instanced.instanceColor) return
+
+    const glow = pulse(grade, state.clock.elapsedTime)
+    if (glow !== null) {
+      ;(instanced.material as MeshStandardMaterial).emissiveIntensity = glow
+    }
 
     let dirty = false
     buildings.forEach((building, index) => {
@@ -95,9 +102,16 @@ function GradeGroup({ grade, buildings, districtY }: GroupProps) {
         const index = event.instanceId
         if (index !== undefined) void select(buildings[index])
       }}
+      onDoubleClick={(event) => {
+        event.stopPropagation()
+        const index = event.instanceId
+        if (index === undefined) return
+        void select(buildings[index])
+        window.dispatchEvent(new CustomEvent('repocity:focus'))
+      }}
+      material={material}
     >
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial roughness={0.45} metalness={0.15} />
     </instancedMesh>
   )
 }

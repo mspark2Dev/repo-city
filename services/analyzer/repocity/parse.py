@@ -47,6 +47,7 @@ class ImportSpec:
 class ParsedFile:
     functions: int = 0
     classes: int = 0
+    doc_lines: int = 0
     imports: list[ImportSpec] = field(default_factory=list)
     cc: ComplexityResult = field(
         default_factory=lambda: ComplexityResult(max_cc=0, avg_cc=0.0, total_cc=0, function_count=0)
@@ -72,6 +73,7 @@ def parse_source(source: bytes, lang: Lang) -> ParsedFile:
     tree = parser.parse(source)
     out = ParsedFile()
     _walk(tree.root_node, source, lang, out)
+    out.doc_lines = _doc_lines(tree.root_node, lang)
     out.cc = complexity(tree.root_node, source, _GRAMMAR[lang])
     out.ok = not tree.root_node.has_error
     return out
@@ -98,6 +100,46 @@ def _walk(node: Node, src: bytes, lang: Lang, out: ParsedFile) -> None:
 
     for child in node.children:
         _walk(child, src, lang, out)
+
+
+_DOC_PARENTS = frozenset({"module", "function_definition", "class_definition"})
+
+
+def _doc_lines(root: Node, lang: Lang) -> int:
+    """Python documents with docstrings, not `#`, so a lexical comment count reports zero
+    for well-documented files. Docstrings are string expressions in a body's first slot."""
+    if lang != "python":
+        return 0
+
+    total = 0
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if node.type in _DOC_PARENTS:
+            body = node if node.type == "module" else node.child_by_field_name("body")
+            literal = _leading_string(body)
+            if literal is not None:
+                total += literal.end_point[0] - literal.start_point[0] + 1
+        stack.extend(node.children)
+    return total
+
+
+def _leading_string(body: Node | None) -> Node | None:
+    """The docstring in a body's first slot.
+
+    Current grammars put the literal there directly; older ones wrap it in an
+    expression_statement. Both shapes are accepted so a grammar bump cannot silently
+    zero out every comment count.
+    """
+    if body is None or not body.named_child_count:
+        return None
+    first = body.named_children[0]
+    if first.type == "string":
+        return first
+    if first.type == "expression_statement" and first.named_child_count:
+        inner = first.named_children[0]
+        return inner if inner.type == "string" else None
+    return None
 
 
 def _text(node: Node, src: bytes) -> str:

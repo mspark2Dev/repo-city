@@ -1,11 +1,14 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
+import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { Suspense } from 'react'
 import { useCityStore } from '../store'
 import { Buildings } from './Buildings'
 import { CameraRig } from './CameraRig'
+import { Controls } from './Controls'
 import { Districts } from './Districts'
 import { Links } from './Links'
+import { Smoke } from './Smoke'
 import { GROUND } from './palette'
 
 /** The reference grid only reads correctly if it spans the city it sits under. */
@@ -46,14 +49,20 @@ export function CityCanvas() {
         {status === 'ready' && (
           <>
             <CameraRig />
+            <Controls />
             <Districts />
             <Buildings />
             <Links />
+            <Smoke />
           </>
         )}
       </Suspense>
 
       <Ground />
+      <EffectComposer>
+        <Bloom intensity={0.55} luminanceThreshold={0.32} luminanceSmoothing={0.85} mipmapBlur />
+      </EffectComposer>
+
       <OrbitControls
         makeDefault
         enableDamping

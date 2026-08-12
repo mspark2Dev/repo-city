@@ -184,6 +184,10 @@ ID 는 **배열 인덱스가 아니라 레포 상대경로**다. 리팩토링 �
 | `hot` | 11–20 | 거친 콘크리트 | `#FF7A3D` | 미세 그레인 |
 | `critical` | > 20 | 녹슨 콘크리트 + 경고 셰이더(맥동) | `#FF3B30` | 먼지/연기 파티클 |
 
+재질은 grade 별 InstancedMesh 에 하나씩 붙는다. `clean` 은 `MeshPhysicalMaterial` 의 transmission
+으로 유리, 나머지는 roughness 를 올려 콘크리트로 간다. `critical` 은 `emissiveIntensity` 를
+매 프레임 맥동시킨다.
+
 **[결정 5] 파티클은 화면 내 `critical` 상위 N=12 개에만 붙인다.** 전 건물 파티클은
 드로우콜을 폭발시킨다. 카메라 프러스텀 + 거리순 정렬로 매 프레임이 아니라 200ms 스로틀로 갱신.
 
@@ -191,7 +195,9 @@ ID 는 **배열 인덱스가 아니라 레포 상대경로**다. 리팩토링 �
 전체 링크를 다 그리면 1900개 곡선이 헤어볼이 되어 아무 정보도 주지 못한다.
 - 기본: **weight 상위 5% 만** 은은하게 표시
 - 노드 hover/select: 해당 노드의 **1-hop 링크 전부** 를 강조 표시, 나머지는 dim
-- 양방향(순환) 의존은 항상 표시 — 이건 찾아내야 할 결함이므로 붉고 두껍게
+- 양방향(순환) 의존은 항상 표시 — 이건 찾아내야 할 결함이므로 붉고 두껍게.
+  **튜브 지오메트리로 그린다**: WebGL 은 주요 플랫폼에서 `lineWidth` 를 무시하므로, 선으로 그리면
+  "두껍게" 가 성립하지 않고 1px 로 나온다
 
 ---
 
@@ -223,19 +229,27 @@ LOC 가 10줄 바뀌는 순간 도시 전체가 재배열된다. 그러면 "리�
 - **파서:** `tree-sitter` + `tree-sitter-language-pack` (언어별 빌드 불필요)
 - **MVP 언어:** Python, TypeScript/TSX, JavaScript/JSX. 그 외 확장자는 LOC 만 집계하고
   `lang: "other"` 로 회색 건물 처리 (도시에서 사라지지 않게)
-- **LOC:** 전체 라인 / `sloc`(주석·공백 제외) / 주석 라인 분리 집계
+- **LOC:** 전체 라인 / `sloc`(주석·공백 제외) / 주석 라인 분리 집계.
+  Python docstring 은 AST 로 찾아 주석으로 집계한다. `#` 만 세면 잘 문서화된 파이썬 파일이
+  주석 0 으로 나온다
 - **순환 복잡도:** AST 질의로 분기 노드 카운트 → `CC = 1 + Σ(분기)`
   분기 노드: `if/elif`, `for`, `while`, `case`, `catch/except`, `&&`, `||`, `??`, 삼항, `assert`
   언어별 노드 타입 매핑은 `metrics/cc_rules.json` 으로 외부화 (언어 추가가 코드 수정 없이 가능).
   `"binary_expression:&&"` 처럼 연산자까지 지정 가능
 - **import 해석:**
   - Python: 상대 import 는 패키지 경로 기준, 절대 import 는 프로젝트 루트/`src` 루트 후보로 탐색
-  - TS/JS: 상대경로 + `tsconfig.json` 의 `paths`/`baseUrl` 별칭 해석, 확장자 후보 순회
+  - TS/JS: 상대경로 + `tsconfig.json`/`jsconfig.json` 의 `paths`/`baseUrl` 별칭 해석,
+    확장자·index 후보 순회. tsconfig 는 주석과 trailing comma 를 허용하는 JSONC 라 전용 파서를 쓴다.
+    별칭이 구체적 파일을 가리키는 경우(`"~lib": ["lib/index.ts"]`)를 위해 경로 원본도 후보에 넣는다
   - 해석 실패 = 외부 패키지로 간주 → `unresolved` 에 기록하고 **링크는 만들지 않는다**
   - `unresolved` 비율은 stats 에 노출한다. 이 수치가 곧 그래프 신뢰도이므로 숨기지 않는다.
 - **성능:** 파일 단위 `ProcessPoolExecutor` 병렬 파싱. 목표 — 1000 파일 / 10초 이내
-- **캐시:** `.repocity/cache/<sha1(path)>.json` 에 `mtime+size` 키로 파일별 분석 결과 저장.
-  재분석 시 변경 파일만 다시 판다 (Phase 4 의 즉시 반영을 가능하게 하는 부분)
+- **캐시:** 사용자 캐시 디렉토리(`~/.cache/repocity/<projectId>.json`, `REPOCITY_CACHE_DIR` 로 재정의)
+  에 `mtime+size` 키로 파일별 분석 결과를 저장. 재분석 시 변경 파일만 다시 판다.
+  **분석 대상 리포지토리 안에는 아무것도 쓰지 않는다** — 남의 체크아웃을 들여다보는 도구가
+  거기에 파일을 남기면 상대의 `git status` 에 나타난다.
+  캐시 키에는 **분석기 자신의 소스 해시**가 포함된다. mtime+size 만으로는 분석 *대상*의 변경만
+  감지하고 분석 *로직*의 변경은 놓쳐서, 메트릭 계산을 고쳐도 옛 숫자를 계속 돌려주게 된다.
 
 ---
 

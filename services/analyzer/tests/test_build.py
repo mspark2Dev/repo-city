@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from repocity import cache
 from repocity.build import build_city, grade_for, height_for
 from repocity.schema import CityMap
 from repocity.serialize import strip_volatile, to_dict, to_json
@@ -126,3 +127,29 @@ def test_metrics_use_the_documented_wire_names(city: CityMap):
     """DESIGN.md specifies maxCC/avgCC; the camelCase generator would produce maxCc."""
     metrics = to_dict(city)["buildings"][0]["metrics"]
     assert {"maxCC", "avgCC", "ccDensity", "fanIn", "fanOut"} <= set(metrics)
+
+
+def test_cache_round_trips(fixture_root: Path, tmp_path, monkeypatch):
+    monkeypatch.setenv("REPOCITY_CACHE_DIR", str(tmp_path))
+    cold = build_city(fixture_root)
+    warm = build_city(fixture_root)
+    assert strip_volatile(to_dict(cold)) == strip_volatile(to_dict(warm))
+    assert cache.FileCache.load(fixture_root).entries
+
+
+def test_cache_invalidates_when_the_analyzer_changes(fixture_root: Path, tmp_path, monkeypatch):
+    """Keying only on mtime and size would serve old metrics after a logic change."""
+    monkeypatch.setenv("REPOCITY_CACHE_DIR", str(tmp_path))
+    build_city(fixture_root)
+    assert cache.FileCache.load(fixture_root).entries
+
+    monkeypatch.setattr(cache, "analyzer_fingerprint", lambda: "some-other-build")
+    assert cache.FileCache.load(fixture_root).entries == {}
+
+
+def test_cache_stays_out_of_the_analyzed_repository(fixture_root: Path, tmp_path, monkeypatch):
+    """repoCity is pointed at other people's checkouts; it must not leave files in them."""
+    monkeypatch.setenv("REPOCITY_CACHE_DIR", str(tmp_path))
+    build_city(fixture_root)
+    assert not (fixture_root / ".repocity").exists()
+    assert list(tmp_path.glob("*.json"))
