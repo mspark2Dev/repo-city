@@ -51,6 +51,18 @@ API surfaces should carry their intent and constraints.
 committed, so building the web app does not require the Python toolchain. Never edit them by hand;
 change `schema.py` and regenerate.
 
+## Continuous integration
+
+Every push and pull request runs three jobs: the analyzer (ruff, format check, pytest), the
+web app (typecheck, build), and a schema drift check that regenerates the TypeScript types
+and fails if the committed files differ. Run the same checks locally:
+
+```bash
+cd services/analyzer && uv run ruff check . && uv run ruff format --check . && uv run pytest
+pnpm --filter web exec tsc --noEmit && pnpm --filter web build
+pnpm gen:types && git diff --exit-code
+```
+
 ## Pull requests
 
 - Keep them focused; a PR that does two unrelated things is two PRs.
