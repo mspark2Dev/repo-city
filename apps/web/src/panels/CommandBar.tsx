@@ -1,13 +1,9 @@
 import { useState } from 'react'
+import { useT } from '../i18n'
 import { useCityStore } from '../store'
 
-const SUGGESTIONS = [
-  'Split the most complex function into smaller ones.',
-  'Add type hints to every function.',
-  'Extract the repeated branches into a lookup table.',
-]
-
 export function CommandBar() {
+  const t = useT()
   const [instruction, setInstruction] = useState('')
   const selected = useCityStore((s) => s.selected)
   const llm = useCityStore((s) => s.llm)
@@ -30,7 +26,7 @@ export function CommandBar() {
             </div>
           ))}
           {status === 'generating' && (
-            <pre className="stream">{streamed.slice(-600) || 'writing…'}</pre>
+            <pre className="stream">{streamed.slice(-600) || t.agent.writing}</pre>
           )}
           {agentError && <div className="agent-error">{agentError}</div>}
         </div>
@@ -48,22 +44,22 @@ export function CommandBar() {
           onChange={(event) => setInstruction(event.target.value)}
           placeholder={
             !llm?.ok
-              ? (llm?.detail ?? 'connecting to the model…')
+              ? (llm?.detail ?? t.agent.connecting)
               : selected
-                ? `Refactor ${selected.name}…`
-                : 'Select a building first'
+                ? t.agent.refactor(selected.name)
+                : t.agent.selectFirst
           }
           disabled={disabled}
           spellCheck={false}
         />
         <button type="submit" disabled={disabled || !instruction.trim()}>
-          {busy ? status : 'send'}
+          {busy ? (status === 'planning' ? t.agent.planning : t.agent.generating) : t.agent.send}
         </button>
       </form>
 
       {selected && llm?.ok && !busy && (
         <div className="suggestions">
-          {SUGGESTIONS.map((text) => (
+          {t.agent.suggestions.map((text) => (
             <button key={text} type="button" onClick={() => setInstruction(text)}>
               {text}
             </button>

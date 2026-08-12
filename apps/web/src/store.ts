@@ -13,6 +13,7 @@ import {
   type FileDetail,
 } from './api/rest'
 import { connect, type ServerEvent, type Verdict } from './api/ws'
+import { useLocaleStore } from './i18n'
 import type { Building, CityMap } from './api/types.gen'
 import { applyDelta, ghostsOf, TRANSITION_MS, type Transition } from './city/delta'
 
@@ -219,6 +220,10 @@ async function refreshSelection(set: Setter, get: Getter, projectId: string): Pr
   if (current) set({ detail: await fetchDetail(projectId, current.id) })
 }
 
+function retryLabel(reason: string): string {
+  return useLocaleStore.getState().t.agent.retrying(reason)
+}
+
 type Setter = (partial: Partial<CityState>) => void
 type Getter = () => CityState
 
@@ -231,7 +236,7 @@ function handleEvent(event: ServerEvent, set: Setter, get: Getter): void {
       set({ streamed: get().streamed + event.delta })
       break
     case 'agent.retry':
-      set({ streamed: '', steps: [...get().steps, `retrying: ${event.reason}`] })
+      set({ streamed: '', steps: [...get().steps, retryLabel(event.reason)] })
       break
     case 'agent.diff':
       set({

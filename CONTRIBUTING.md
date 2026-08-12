@@ -45,6 +45,10 @@ One commit does one thing. Do not add `Co-Authored-By` trailers.
 **Python** — type hints required, `ruff` and `ruff format` clean.
 **TypeScript** — `strict: true`, no `any`.
 
+**User-facing strings** live in `apps/web/src/i18n/messages.ts`, never inline in a
+component. English defines the `Messages` type and Korean must satisfy it, so adding a
+string to one locale without the other fails typecheck.
+
 **Comments** explain *why*, not *what*. Do not restate what the code already says, and do not invent
 docstrings for self-evident functions. Non-obvious algorithms (`layout.py`, `imports/`) and public
 API surfaces should carry their intent and constraints.

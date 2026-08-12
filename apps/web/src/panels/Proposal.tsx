@@ -1,4 +1,5 @@
 import { DiffEditor } from '@monaco-editor/react'
+import { useT } from '../i18n'
 import { useCityStore } from '../store'
 
 const MONACO_LANG: Record<string, string> = {
@@ -10,6 +11,7 @@ const MONACO_LANG: Record<string, string> = {
 
 /** Nothing is written until Apply is pressed; this view is the point of that split. */
 export function Proposal() {
+  const t = useT()
   const proposal = useCityStore((s) => s.proposal)
   const detail = useCityStore((s) => s.detail)
   const selected = useCityStore((s) => s.selected)
@@ -22,18 +24,16 @@ export function Proposal() {
 
   return (
     <div className="proposal">
-      <h3>Proposed change</h3>
+      <h3>{t.proposal.title}</h3>
 
       {verdict && (
         <div className="verdict">
           <span className={verdict.improved ? 'good' : 'flat'}>
-            max CC {verdict.beforeMaxCC} → {verdict.afterMaxCC}
+            {t.proposal.maxCC(verdict.beforeMaxCC, verdict.afterMaxCC)}
           </span>
-          <span>
-            {verdict.beforeLoc} → {verdict.afterLoc} lines
-          </span>
+          <span>{t.proposal.lines(verdict.beforeLoc, verdict.afterLoc)}</span>
           {verdict.lostSymbols.length > 0 && (
-            <span className="warn">removed: {verdict.lostSymbols.join(', ')}</span>
+            <span className="warn">{t.proposal.removed(verdict.lostSymbols.join(', '))}</span>
           )}
         </div>
       )}
@@ -60,10 +60,10 @@ export function Proposal() {
 
       <div className="actions">
         <button type="button" className="primary" onClick={() => void apply()}>
-          Apply
+          {t.proposal.apply}
         </button>
         <button type="button" onClick={discard}>
-          Discard
+          {t.proposal.discard}
         </button>
       </div>
     </div>

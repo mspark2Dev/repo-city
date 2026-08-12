@@ -98,6 +98,13 @@ uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
 very high complexity function deliberately planted in it, so you can see what those look
 like in the city before pointing repoCity at your own code.
 
+## Language
+
+The interface is in English or Korean, chosen from the browser's language preferences on
+first load, with a toggle in the top right that is remembered afterwards. English is the
+source of truth for the message catalogue: `Messages` is derived from it, so a key missing
+from Korean is a compile error rather than a string that silently falls back.
+
 ## Reaching it from another machine
 
 The dev server binds to localhost. To use repoCity from a second machine — over a VPN such

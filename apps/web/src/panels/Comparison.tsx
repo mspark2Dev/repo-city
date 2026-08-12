@@ -1,7 +1,9 @@
+import { useT } from '../i18n'
 import { useCityStore } from '../store'
 
 /** Before/after for the file that was changed, with the city toggled alongside it. */
 export function Comparison() {
+  const t = useT()
   const baseline = useCityStore((s) => s.baseline)
   const city = useCityStore((s) => s.city)
   const selected = useCityStore((s) => s.selected)
@@ -15,17 +17,17 @@ export function Comparison() {
   if (!before || !after) return null
 
   const rows: [string, number, number][] = [
-    ['max CC', before.metrics.maxCC, after.metrics.maxCC],
-    ['lines', before.metrics.loc, after.metrics.loc],
-    ['functions', before.metrics.functions, after.metrics.functions],
+    [t.comparison.maxCC, before.metrics.maxCC, after.metrics.maxCC],
+    [t.comparison.lines, before.metrics.loc, after.metrics.loc],
+    [t.comparison.functions, before.metrics.functions, after.metrics.functions],
   ]
 
   return (
     <div className="comparison">
       <div className="comparison-head">
-        <h3>Before / after</h3>
+        <h3>{t.comparison.title}</h3>
         <button type="button" className={showBaseline ? 'on' : ''} onClick={toggle}>
-          {showBaseline ? 'showing before' : 'show before'}
+          {showBaseline ? t.comparison.showingBefore : t.comparison.showBefore}
         </button>
       </div>
 
@@ -33,8 +35,8 @@ export function Comparison() {
         <thead>
           <tr>
             <th />
-            <th>before</th>
-            <th>after</th>
+            <th>{t.comparison.before}</th>
+            <th>{t.comparison.after}</th>
           </tr>
         </thead>
         <tbody>
@@ -46,9 +48,9 @@ export function Comparison() {
             </tr>
           ))}
           <tr>
-            <td>grade</td>
-            <td className="from">{before.grade}</td>
-            <td className={after.grade !== before.grade ? 'better' : ''}>{after.grade}</td>
+            <td>{t.comparison.grade}</td>
+            <td className="from">{t.grade[before.grade]}</td>
+            <td className={after.grade !== before.grade ? 'better' : ''}>{t.grade[after.grade]}</td>
           </tr>
         </tbody>
       </table>

@@ -1,5 +1,6 @@
-import { useCityStore } from '../store'
+import { useT } from '../i18n'
 import { GRADE_COLOR } from '../scene/palette'
+import { useCityStore } from '../store'
 import { CodeView } from './CodeView'
 import { Comparison } from './Comparison'
 import { Proposal } from './Proposal'
@@ -19,6 +20,7 @@ function Row({ label, value }: { label: string; value: string | number }) {
 }
 
 export function Inspector() {
+  const t = useT()
   const city = useCityStore((s) => s.city)
   const llm = useCityStore((s) => s.llm)
   const snapshotId = useCityStore((s) => s.snapshotId)
@@ -30,7 +32,7 @@ export function Inspector() {
 
   const badge = (
     <div className={`llm-badge ${llm?.ok ? 'up' : 'down'}`} title={llm?.detail ?? ''}>
-      {llm?.ok ? `agent: ${llm.model}` : `agent offline${llm?.detail ? ` — ${llm.detail}` : ''}`}
+      {llm?.ok && llm.model ? t.agent.online(llm.model) : t.agent.offline(llm?.detail ?? null)}
     </div>
   )
 
@@ -38,24 +40,17 @@ export function Inspector() {
     return (
       <div className="inspector">
         {badge}
-        <h2>City</h2>
-        <Row label="files" value={city.stats.files} />
-        <Row label="lines" value={city.stats.loc.toLocaleString()} />
-        <Row label="imports resolved" value={city.stats.links} />
+        <h2>{t.city.title}</h2>
+        <Row label={t.city.files} value={city.stats.files} />
+        <Row label={t.city.lines} value={city.stats.loc.toLocaleString()} />
+        <Row label={t.city.resolved} value={city.stats.links} />
         <Row
-          label="unresolved imports"
-          value={`${city.stats.unresolved} (${resolvedShare(city.stats)}% resolved)`}
+          label={t.city.unresolved}
+          value={t.city.unresolvedShare(city.stats.unresolved, resolvedShare(city.stats))}
         />
-        <p className="hint">
-          Unresolved specifiers are packages or paths this analyzer could not map to a file.
-          They are excluded from the graph, so this share is how much of the dependency
-          picture you are actually seeing.
-        </p>
-        <p className="hint">Click a building to inspect it. Double-click to fly to it.</p>
-        <p className="hint">
-          The field at the top left takes a local path or a git URL; remote repositories are
-          cloned shallowly into your data directory.
-        </p>
+        <p className="hint">{t.city.unresolvedNote}</p>
+        <p className="hint">{t.city.selectHint}</p>
+        <p className="hint">{t.city.sourceHint}</p>
       </div>
     )
   }
@@ -66,28 +61,28 @@ export function Inspector() {
       {badge}
       {snapshotId && (
         <div className="revert-bar">
-          Change applied.
+          {t.applied.message}
           <button type="button" onClick={() => void revert()}>
-            Revert
+            {t.applied.revert}
           </button>
         </div>
       )}
       <h2 title={building.path}>{building.name}</h2>
       <div className="grade" style={{ background: GRADE_COLOR[building.grade] }}>
-        {building.grade} · max CC {m.maxCC}
+        {t.building.gradeBadge(t.grade[building.grade], m.maxCC)}
       </div>
       <p className="path">{building.path}</p>
 
-      <Row label="lines" value={m.loc} />
-      <Row label="code / comments" value={`${m.sloc} / ${m.comments}`} />
-      <Row label="functions / classes" value={`${m.functions} / ${m.classes}`} />
-      <Row label="avg CC" value={m.avgCC} />
-      <Row label="imported by" value={m.fanIn} />
-      <Row label="imports" value={m.fanOut} />
+      <Row label={t.building.lines} value={m.loc} />
+      <Row label={t.building.codeComments} value={`${m.sloc} / ${m.comments}`} />
+      <Row label={t.building.functionsClasses} value={`${m.functions} / ${m.classes}`} />
+      <Row label={t.building.avgCC} value={m.avgCC} />
+      <Row label={t.building.importedBy} value={m.fanIn} />
+      <Row label={t.building.imports} value={m.fanOut} />
 
       {detail && (
         <>
-          <h3>Dependencies</h3>
+          <h3>{t.building.dependencies}</h3>
           <ul>
             {detail.imports.map((id) => (
               <li key={id}>→ {id.slice(2)}</li>
@@ -98,14 +93,14 @@ export function Inspector() {
               </li>
             ))}
             {detail.imports.length + detail.importedBy.length === 0 && (
-              <li className="hint">none resolved</li>
+              <li className="hint">{t.building.noneResolved}</li>
             )}
           </ul>
 
           <Proposal />
           <Comparison />
 
-          <h3>Source</h3>
+          <h3>{t.building.source}</h3>
           <CodeView />
         </>
       )}

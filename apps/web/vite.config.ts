@@ -16,9 +16,9 @@ export default defineConfig({
   server: {
     host: process.env.REPOCITY_WEB_HOST ?? 'localhost',
     port: Number(process.env.REPOCITY_WEB_PORT ?? 5173),
-    strictPort: true,
     // Vite rejects Host headers it does not know, which is what stops a hostile page from
-    // pointing a name it controls at this server. Names have to be listed on purpose.
+    // pointing a name it controls at this server. Names have to be listed on purpose; the
+    // port is not part of the check, so one entry covers whichever port Vite settles on.
     allowedHosts: list(process.env.REPOCITY_ALLOWED_HOSTS),
     proxy: {
       '/api': { target: 'http://127.0.0.1:8787', changeOrigin: true },
