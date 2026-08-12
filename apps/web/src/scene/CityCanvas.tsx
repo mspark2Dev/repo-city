@@ -7,6 +7,7 @@ import { Buildings } from './Buildings'
 import { CameraRig } from './CameraRig'
 import { Controls } from './Controls'
 import { Districts } from './Districts'
+import { Explosion } from './Explosion'
 import { Links } from './Links'
 import { Smoke } from './Smoke'
 import { GROUND } from './palette'
@@ -54,6 +55,7 @@ export function CityCanvas() {
             <Buildings />
             <Links />
             <Smoke />
+            <Explosion />
           </>
         )}
       </Suspense>

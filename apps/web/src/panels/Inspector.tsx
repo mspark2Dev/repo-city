@@ -1,6 +1,7 @@
 import { useCityStore } from '../store'
 import { GRADE_COLOR } from '../scene/palette'
 import { CodeView } from './CodeView'
+import { Comparison } from './Comparison'
 import { Proposal } from './Proposal'
 
 function resolvedShare(stats: { links: number; unresolved: number }): number {
@@ -98,6 +99,7 @@ export function Inspector() {
           </ul>
 
           <Proposal />
+          <Comparison />
 
           <h3>Source</h3>
           <CodeView />

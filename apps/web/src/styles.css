@@ -367,3 +367,92 @@ pre {
   background: #1d4ed8;
   border-color: #1d4ed8;
 }
+
+.progress {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  width: 260px;
+}
+
+.progress .bar {
+  background: #161c28;
+  border-radius: 3px;
+  height: 4px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.progress .fill {
+  background: #4ea8ff;
+  height: 100%;
+  transition: width 120ms linear;
+}
+
+.comparison {
+  margin-bottom: 8px;
+}
+
+.comparison-head {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.comparison-head button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.comparison-head button.on {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: white;
+}
+
+.comparison table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+}
+
+.comparison th {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.comparison td {
+  border-bottom: 1px solid var(--line);
+  padding: 5px 0;
+  text-align: right;
+}
+
+.comparison td:first-child {
+  color: var(--muted);
+  text-align: left;
+}
+
+.comparison .from {
+  color: var(--muted);
+}
+
+.comparison .better {
+  color: #6ee7a0;
+}
+
+.comparison .worse {
+  color: #ffc24e;
+}

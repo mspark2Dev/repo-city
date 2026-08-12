@@ -220,10 +220,22 @@ ID 는 **배열 인덱스가 아니라 레포 상대경로**다. 리팩토링 �
 구역 면적은 `(sqrt(자식 면적 합 × 1.25) + 2 × padding)²` 이다. padding 을 면적에 `padding²` 만
 더하면 실제 inset 이 깎는 양(`2p(w+d) - 4p²`)에 못 미쳐, 중첩될수록 건물이 조각으로 눌린다.
 
-**[결정 6] 건물 배치 순서는 크기순이 아니라 이름순이다.** 크기순 정렬이 패킹은 예쁘지만,
-LOC 가 10줄 바뀌는 순간 도시 전체가 재배열된다. 그러면 "리팩토링 전후 비교"라는 이 도구의
-핵심 가치가 사라진다. 이름순 + 25% 여유 면적을 두면, 파일이 추가/삭제되지 않는 한
-리팩토링 후에도 건물은 **제자리에서 높이와 색만 바뀐다.**
+**[결정 6] 레이아웃은 메트릭이 아니라 구조에만 의존한다.** (Phase 4 에서 수정)
+
+원래 이 항목은 "이름순 배치 + 25% 여유 면적이면 건물이 제자리에 남는다" 였는데, **틀렸다.**
+squarified treemap 은 남은 사각형을 면적 비율로 항상 꽉 채우므로, 여유 면적은 넘침만 막을 뿐
+재분배는 막지 못한다. 셀 크기를 심볼 수에서 뽑고 있었기 때문에 함수 하나만 추가해도 그 파일의
+면적이 바뀌고 → 구역 면적이 바뀌고 → 도시 전체 좌표가 흔들렸다. 픽스처에서 한 줄 수정에
+**29개 건물이 전부 이동**했다.
+
+수정: 모든 파일이 **동일한 셀**(`CELL_SIDE`)을 받는다. 레이아웃은 "어떤 경로가 존재하는가"의
+순수 함수이고, 메트릭은 절대 개입하지 않는다. 배치 순서는 이름순 그대로다.
+
+- 파일 내용만 바뀌면 → 그 건물 하나만 갱신 (`test_layout_does_not_depend_on_metrics` 로 고정)
+- 파일이 추가·삭제되면 → 구조가 바뀐 것이므로 재배치가 일어나는 게 맞다
+
+대가: footprint 가 셀 상한을 넘지 못하므로 심볼 수는 그 지점까지만 읽힌다. 주된 신호인 높이(LOC)
+와 색(복잡도)은 영향받지 않는다. Phase 4 의 트랜지션과 전후 비교가 전부 이 계약 위에 있다.
 
 ---
 
@@ -263,8 +275,8 @@ LOC 가 10줄 바뀌는 순간 도시 전체가 재배열된다. 그러면 "리�
 ### REST
 | 메서드 | 경로 | 요청 | 응답 |
 |---|---|---|---|
-| POST | `/api/v1/analyze` | `{path, include?, exclude?, force?}` | `202 {jobId, projectId}` |
-| GET | `/api/v1/analyze/{jobId}` | – | `{status, progress, filesDone, filesTotal, error?}` |
+| POST | `/api/v1/analyze` | `{path, exclude?}` | `202 {jobId, projectId}` — 즉시 반환, 백그라운드 분석 |
+| GET | `/api/v1/analyze/{jobId}` | – | `{status, done, total, error?}` |
 | GET | `/api/v1/projects/{projectId}/citymap` | – | `CityMap.json` |
 | GET | `/api/v1/projects/{projectId}/metrics/{node_id}` | – | `{metrics, source, imports[], importedBy[]}` |
 
@@ -286,7 +298,16 @@ node id 는 `f:src/core/parser.py` 처럼 슬래시를 포함한다. FastAPI `:p
 | `agent.token` | 토큰 스트리밍 | `{taskId, delta}` |
 | `agent.diff` | diff 생성 완료 | `{taskId, diff, files[]}` |
 | `agent.error` | 실패 | `{taskId, message, stage}` |
-| `citymap.delta` | 파일 변경 반영 | `{ops:[{op:"add"\|"update"\|"remove", ...}]}` |
+| `analysis.error` | 분석 실패 | `{jobId, message}` |
+| `citymap.delta` | 도시 변경 | `{reason?, ops[], links[], stats}` |
+
+`citymap.delta` 의 `ops` 는 `add` / `remove` / `update` / `district.*` 이고, `update` 에는
+`previous`(직전 height·grade·maxCC·loc)가 함께 실린다. 프론트는 이 값으로 트랜지션의 시작
+상태를 잡는다. 델타가 성립하는 이유는 ID 안정성 계약(§2) 하나뿐이다 — 같은 파일이 분석을
+다시 해도 같은 ID 를 유지하지 않으면 "무엇이 바뀌었는지" 자체를 말할 수 없다.
+
+클라이언트는 분석 시작 **전에** 이 소켓에 붙는다. 이미 화면에 있는 프로젝트를 재분석하면
+도시를 통째로 교체하지 않고 델타로 갱신해야 애니메이션이 성립하기 때문이다.
 
 **[결정 7] 소켓은 태스크당이 아니라 프로젝트당 하나다.** 노트의 `/ws/agent/stream` 은
 리팩토링 전용이었지만, 분석 진행률과 도시 델타도 같은 채널로 흘려보내는 편이

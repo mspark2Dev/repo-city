@@ -20,6 +20,9 @@ class ProjectStore:
     def put(self, city: CityMap) -> None:
         self._cities[city.project_id] = city
 
+    def peek(self, project_id: str) -> CityMap | None:
+        return self._cities.get(project_id)
+
     def get(self, project_id: str) -> CityMap:
         try:
             return self._cities[project_id]

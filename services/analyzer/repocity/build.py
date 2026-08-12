@@ -11,6 +11,7 @@ import hashlib
 import math
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
@@ -36,6 +37,9 @@ from .schema import (
     Unresolved,
 )
 
+PROGRESS_EVERY = 50
+"""Report progress in batches; a callback per file costs more than the parse."""
+
 MAX_HEIGHT = 12.0
 MIN_HEIGHT = 0.5
 
@@ -47,6 +51,20 @@ project reach maximum height — the skyline stops carrying information. Blendin
 absolute reference also makes heights comparable between repositories."""
 MIN_FOOTPRINT = 1.2
 MAX_FOOTPRINT = 6.0
+
+CELL_SIDE = 2.8
+"""Every file gets the same cell, regardless of its metrics.
+
+Layout is a pure function of the directory tree — which paths exist and where — and never
+of the numbers attached to them. Sizing cells by symbol count meant adding one function to
+one file changed that file's area, which changed its district's area, which redistributed
+every rectangle in the city: a one-line edit moved all 29 buildings in the fixture.
+
+Phase 4's transition animation, and the whole idea of comparing a city before and after a
+refactoring, rest on buildings staying where they were. The cost is that footprint stops
+growing past the cell, so symbol count is only legible up to that cap; height and colour
+carry the signals that matter most.
+"""
 
 BAND_CLEARANCE = 1.15
 """How much thicker than its widest building a district's file band must be."""
@@ -160,8 +178,15 @@ def _directories(paths: list[str]) -> list[str]:
     return sorted(dirs)
 
 
+ProgressHook = Callable[[int, int], None]
+
+
 def build_city(
-    root: Path, extra_excludes: tuple[str, ...] = (), *, use_cache: bool = True
+    root: Path,
+    extra_excludes: tuple[str, ...] = (),
+    *,
+    use_cache: bool = True,
+    on_progress: ProgressHook | None = None,
 ) -> CityMap:
     started = time.perf_counter()
     root = root.resolve()
@@ -170,7 +195,8 @@ def build_city(
     cache = FileCache.load(root) if use_cache else None
 
     facts: dict[str, _FileFacts] = {}
-    for file in files:
+    total = len(files)
+    for index, file in enumerate(files, start=1):
         cached = cache.get(file.rel_path, file.mtime_ns, file.size) if cache else None
         if cached is not None:
             item = _FileFacts(file)
@@ -180,6 +206,8 @@ def build_city(
             if cache:
                 cache.put(file.rel_path, file.mtime_ns, file.size, item.to_cache())
         facts[file.rel_path] = item
+        if on_progress is not None and (index % PROGRESS_EVERY == 0 or index == total):
+            on_progress(index, total)
 
     if cache:
         cache.prune(set(facts))
@@ -252,8 +280,7 @@ def _build_tree(
     for child in sorted(children_of.get(path, [])):
         items.append(_build_tree(child, children_of, files_of, facts))
     for file_path in sorted(files_of.get(path, [])):
-        side = footprint_for(facts[file_path].symbols)
-        items.append(LayoutItem(key=file_path, area=side * side, is_leaf=True))
+        items.append(LayoutItem(key=file_path, area=CELL_SIDE * CELL_SIDE, is_leaf=True))
 
     items.sort(key=lambda i: i.key)
 

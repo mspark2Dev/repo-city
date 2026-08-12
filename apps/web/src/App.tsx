@@ -6,6 +6,24 @@ import { useCityStore } from './store'
 
 const DEFAULT_PATH = '../../fixtures/sample-project'
 
+function Progress() {
+  const status = useCityStore((s) => s.status)
+  const progress = useCityStore((s) => s.progress)
+  if (status !== 'loading') return null
+
+  const pct = progress && progress.total > 0 ? (progress.done / progress.total) * 100 : 0
+  return (
+    <div className="progress">
+      <div className="bar">
+        <div className="fill" style={{ width: `${pct}%` }} />
+      </div>
+      <span>
+        {progress ? `parsing ${progress.done} / ${progress.total} files` : 'scanning repository…'}
+      </span>
+    </div>
+  )
+}
+
 export function App() {
   const [path, setPath] = useState(DEFAULT_PATH)
   const { status, error, load } = useCityStore()
@@ -30,6 +48,7 @@ export function App() {
             {status === 'loading' ? 'analyzing…' : 'analyze'}
           </button>
         </form>
+        <Progress />
         {status === 'error' && <div className="error">{error}</div>}
         <CommandBar />
       </div>

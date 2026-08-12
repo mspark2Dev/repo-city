@@ -20,13 +20,26 @@ async function json<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export async function analyze(path: string): Promise<{ projectId: string }> {
+export async function analyze(path: string): Promise<{ jobId: string; projectId: string }> {
   const response = await fetch(`${BASE}/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
   })
   return json(response)
+}
+
+export interface JobStatus {
+  jobId: string
+  projectId: string
+  status: 'running' | 'done' | 'error'
+  done: number
+  total: number
+  error: string | null
+}
+
+export async function analysisStatus(jobId: string): Promise<JobStatus> {
+  return json(await fetch(`${BASE}/analyze/${jobId}`))
 }
 
 export async function fetchCityMap(projectId: string): Promise<CityMap> {

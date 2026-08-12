@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from repocity import cache
@@ -153,3 +154,25 @@ def test_cache_stays_out_of_the_analyzed_repository(fixture_root: Path, tmp_path
     build_city(fixture_root)
     assert not (fixture_root / ".repocity").exists()
     assert list(tmp_path.glob("*.json"))
+
+
+def test_layout_does_not_depend_on_metrics(fixture_root: Path, tmp_path, monkeypatch):
+    """Editing one file must not move any other building.
+
+    Phase 4's transition animation and before/after comparison both rest on this: if a
+    one-line edit reshuffles the city, "the building that changed" stops being a thing you
+    can point at.
+    """
+    monkeypatch.setenv("REPOCITY_CACHE_DIR", str(tmp_path / "cache"))
+    project = tmp_path / "project"
+    shutil.copytree(fixture_root, project)
+
+    before = {b.id: (b.position.x, b.position.z) for b in build_city(project).buildings}
+    edited = project / "orderbook" / "util" / "money.py"
+    edited.write_text(
+        edited.read_text() + "\n\ndef added():\n    if 1:\n        return 2\n    return 3\n",
+        encoding="utf-8",
+    )
+    after = {b.id: (b.position.x, b.position.z) for b in build_city(project).buildings}
+
+    assert before == after

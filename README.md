@@ -7,8 +7,9 @@ and lets you point a local LLM at the ugly parts to propose refactorings. Buildi
 of code and rust over with cyclomatic complexity, so the parts of your codebase that need attention
 are the ones you notice first.
 
-> **Status: pre-alpha.** Analysis, visualization, and the refactoring agent all work. What
-> remains is animating the city as changes land (Phase 4). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status: pre-alpha but complete end to end.** Analyze a repository, fly through it, hand a
+> file to the agent, review the diff, apply it, and watch that building rebuild itself.
+> See [docs/ROADMAP.md](docs/ROADMAP.md) for what each phase delivered.
 
 ## The idea
 

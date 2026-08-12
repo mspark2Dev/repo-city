@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from ..agent import LLMAdapter, TaskRegistry, run_refactor
 from ..agent.context import build_context
 from ..agent.patch import apply_change, revert
 from ..build import build_city
+from ..delta import diff_cities
+from ..jobs import JobRegistry
 from ..schema import CityMap
 from ..store import ProjectStore, UnknownProject
 from .ws import hub
@@ -20,6 +23,7 @@ from .ws import hub
 router = APIRouter(prefix="/api/v1")
 store = ProjectStore()
 tasks = TaskRegistry()
+jobs = JobRegistry()
 adapter = LLMAdapter()
 
 
@@ -33,8 +37,8 @@ class AnalyzeRequest(Wire):
 
 
 class AnalyzeResponse(Wire):
+    job_id: str
     project_id: str
-    stats: dict
 
 
 class FileDetail(Wire):
@@ -47,15 +51,65 @@ class FileDetail(Wire):
     imported_by: list[str]
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
-def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+@router.post("/analyze", response_model=AnalyzeResponse, status_code=202)
+async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+    """Start an analysis and return immediately.
+
+    The client subscribes to the project channel with the id returned here, so it sees
+    progress rather than a frozen window while a large repository is parsed.
+    """
     root = Path(request.path).expanduser()
     if not root.is_dir():
         raise HTTPException(status_code=400, detail=f"not a directory: {request.path}")
 
-    city = build_city(root, tuple(request.exclude))
+    project_id = project_id_for(root)
+    job = jobs.create(project_id, str(root))
+    asyncio.create_task(_run_analysis(job, root, tuple(request.exclude)))
+    return AnalyzeResponse(job_id=job.id, project_id=project_id)
+
+
+async def _run_analysis(job, root: Path, excludes: tuple[str, ...]) -> None:
+    loop = asyncio.get_running_loop()
+
+    def on_progress(done: int, total: int) -> None:
+        job.done, job.total = done, total
+        # The parse runs in a worker thread; hop back to the loop to reach the socket.
+        asyncio.run_coroutine_threadsafe(
+            hub.broadcast(
+                job.project_id,
+                {"type": "analysis.progress", "jobId": job.id, "done": done, "total": total},
+            ),
+            loop,
+        )
+
+    try:
+        city = await asyncio.to_thread(build_city, root, excludes, on_progress=on_progress)
+    except OSError as exc:
+        job.status, job.error = "error", str(exc)
+        await hub.broadcast(
+            job.project_id, {"type": "analysis.error", "jobId": job.id, "message": str(exc)}
+        )
+        return
+
+    previous = store.peek(city.project_id)
     store.put(city)
-    return AnalyzeResponse(project_id=city.project_id, stats=city.stats.model_dump(by_alias=True))
+    job.status = "done"
+    await hub.broadcast(
+        job.project_id,
+        {"type": "analysis.done", "jobId": job.id, "projectId": city.project_id},
+    )
+    if previous is not None:
+        await hub.broadcast(
+            job.project_id, {"type": "citymap.delta", **diff_cities(previous, city)}
+        )
+
+
+@router.get("/analyze/{job_id}")
+def analysis_status(job_id: str) -> dict:
+    job = jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="unknown job")
+    return job.as_dict()
 
 
 @router.get("/projects/{project_id}/citymap", response_model=CityMap)
@@ -178,16 +232,18 @@ async def apply(request: ApplyRequest) -> dict:
     city, building = _city_and_building(task.project_id, task.node_id)
     applied = apply_change(task.project_id, task.id, Path(city.root), building.path, task.proposal)
 
-    refreshed = build_city(Path(city.root))
+    refreshed = await asyncio.to_thread(build_city, Path(city.root))
     store.put(refreshed)
+    delta = diff_cities(city, refreshed)
     await hub.broadcast(
         task.project_id,
-        {"type": "citymap.applied", "taskId": task.id, "paths": applied.paths},
+        {"type": "citymap.delta", "taskId": task.id, "reason": "applied", **delta},
     )
     return {
         "applied": applied.paths,
         "snapshotId": applied.snapshot_id,
         "stats": refreshed.stats.model_dump(by_alias=True),
+        "delta": delta,
     }
 
 
@@ -204,10 +260,15 @@ async def revert_snapshot(request: RevertRequest) -> dict:
     except UnknownProject:
         return {"reverted": restored}
 
-    refreshed = build_city(Path(city.root))
+    refreshed = await asyncio.to_thread(build_city, Path(city.root))
     store.put(refreshed)
-    await hub.broadcast(project_id, {"type": "citymap.applied", "paths": restored})
-    return {"reverted": restored, "stats": refreshed.stats.model_dump(by_alias=True)}
+    delta = diff_cities(city, refreshed)
+    await hub.broadcast(project_id, {"type": "citymap.delta", "reason": "reverted", **delta})
+    return {
+        "reverted": restored,
+        "stats": refreshed.stats.model_dump(by_alias=True),
+        "delta": delta,
+    }
 
 
 def project_id_for(root: Path) -> str:
