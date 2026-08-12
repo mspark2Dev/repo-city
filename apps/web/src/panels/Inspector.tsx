@@ -1,6 +1,7 @@
 import { useCityStore } from '../store'
 import { GRADE_COLOR } from '../scene/palette'
 import { CodeView } from './CodeView'
+import { Proposal } from './Proposal'
 
 function resolvedShare(stats: { links: number; unresolved: number }): number {
   const total = stats.links + stats.unresolved
@@ -18,14 +19,24 @@ function Row({ label, value }: { label: string; value: string | number }) {
 
 export function Inspector() {
   const city = useCityStore((s) => s.city)
+  const llm = useCityStore((s) => s.llm)
+  const snapshotId = useCityStore((s) => s.snapshotId)
+  const revert = useCityStore((s) => s.revert)
   const building = useCityStore((s) => s.selected)
   const detail = useCityStore((s) => s.detail)
 
   if (!city) return null
 
+  const badge = (
+    <div className={`llm-badge ${llm?.ok ? 'up' : 'down'}`} title={llm?.detail ?? ''}>
+      {llm?.ok ? `agent: ${llm.model}` : `agent offline${llm?.detail ? ` — ${llm.detail}` : ''}`}
+    </div>
+  )
+
   if (!building) {
     return (
       <div className="inspector">
+        {badge}
         <h2>City</h2>
         <Row label="files" value={city.stats.files} />
         <Row label="lines" value={city.stats.loc.toLocaleString()} />
@@ -47,6 +58,15 @@ export function Inspector() {
   const m = building.metrics
   return (
     <div className="inspector">
+      {badge}
+      {snapshotId && (
+        <div className="revert-bar">
+          Change applied.
+          <button type="button" onClick={() => void revert()}>
+            Revert
+          </button>
+        </div>
+      )}
       <h2 title={building.path}>{building.name}</h2>
       <div className="grade" style={{ background: GRADE_COLOR[building.grade] }}>
         {building.grade} · max CC {m.maxCC}
@@ -76,6 +96,8 @@ export function Inspector() {
               <li className="hint">none resolved</li>
             )}
           </ul>
+
+          <Proposal />
 
           <h3>Source</h3>
           <CodeView />

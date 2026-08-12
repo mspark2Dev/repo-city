@@ -36,3 +36,52 @@ export async function fetchCityMap(projectId: string): Promise<CityMap> {
 export async function fetchDetail(projectId: string, nodeId: string): Promise<FileDetail> {
   return json(await fetch(`${BASE}/projects/${projectId}/metrics/${nodeId}`))
 }
+
+export interface AgentHealth {
+  ok: boolean
+  model: string | null
+  detail: string | null
+}
+
+export async function agentHealth(): Promise<AgentHealth> {
+  return json(await fetch(`${BASE}/agent/health`))
+}
+
+export async function prewarm(projectId: string, nodeId: string): Promise<void> {
+  await fetch(`${BASE}/agent/prewarm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId, nodeId }),
+  })
+}
+
+export async function requestRefactor(
+  projectId: string,
+  nodeId: string,
+  instruction: string,
+): Promise<{ taskId: string }> {
+  const response = await fetch(`${BASE}/agent/refactor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId, nodeId, instruction }),
+  })
+  return json(response)
+}
+
+export async function applyTask(taskId: string): Promise<{ applied: string[]; snapshotId: string }> {
+  const response = await fetch(`${BASE}/agent/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskId }),
+  })
+  return json(response)
+}
+
+export async function revertSnapshot(snapshotId: string): Promise<{ reverted: string[] }> {
+  const response = await fetch(`${BASE}/agent/revert`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ snapshotId }),
+  })
+  return json(response)
+}

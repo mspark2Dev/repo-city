@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .api.rest import router
+from .api.ws import router as ws_router
 
 app = FastAPI(title="repoCity analyzer", version=__version__)
 
@@ -22,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(ws_router)
 
 
 @app.get("/health")

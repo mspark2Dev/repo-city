@@ -6,8 +6,8 @@ repoCity 는 리포지토리를 정적 분석해 3D 도시로 렌더링한다. �
 높아지며, 순환 복잡도가 높을수록 녹슬고 붉게 빛난다. 손봐야 할 코드가 가장 먼저 눈에 들어오게 만드는 것이
 목적이다. 거기에 로컬 LLM 을 붙여 리팩토링을 제안받는다.
 
-> **상태: pre-alpha.** Phase 1 완료 — 리포지토리를 분석해 도시를 날아다닐 수 있다. 리팩토링
-> 에이전트(Phase 3)는 아직 없다. 진행 상황은 [docs/ROADMAP.md](docs/ROADMAP.md) 참고.
+> **상태: pre-alpha.** 분석·시각화·리팩토링 에이전트까지 동작한다. 남은 것은 변경이 반영될 때
+> 도시가 변형되는 애니메이션(Phase 4). 진행 상황은 [docs/ROADMAP.md](docs/ROADMAP.md) 참고.
 
 ## 아이디어
 
@@ -66,6 +66,19 @@ uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
 `fixtures/sample-project` 는 순환 의존 한 쌍과 복잡도가 아주 높은 함수 하나를 일부러 심어둔
 작은 파이썬 프로젝트다. 자기 코드에 들이대기 전에 그런 것들이 도시에서 어떻게 보이는지
 확인할 수 있다.
+
+## 에이전트 사용
+
+`.env` 의 `LLM_BASE_URL` 을 OpenAI 호환 엔드포인트로 지정한다:
+
+```env
+LLM_BASE_URL=http://<host>:<port>/v1
+LLM_MODEL=<해당 서버가 서빙하는 모델>
+LLM_CONTEXT_BUDGET=60000
+```
+
+건물을 고르고 하단 커맨드바에 명령을 넣은 뒤 diff 를 읽고 결정한다. Apply 를 누르기 전까지
+아무것도 쓰이지 않고, 원본은 리포지토리 바깥에 스냅샷으로 남으며, Revert 는 바이트 단위로 되돌린다.
 
 ## 요구사항
 

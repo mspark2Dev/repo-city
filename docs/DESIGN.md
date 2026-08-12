@@ -91,7 +91,10 @@ LLM_CONTEXT_BUDGET=60000   # 프롬프트에 실제로 채울 상한
 사용자 소스코드를 LLM 이 무단으로 덮어쓰는 것은 되돌리기 어려운 파괴적 동작이다.
 `POST /agent/refactor` 는 **unified diff 를 만들어 반환만** 하고, 실제 파일 쓰기는
 사용자가 Monaco diff 뷰에서 확인한 뒤 `POST /agent/apply` 를 호출해야 일어난다.
-적용 전 원본은 `.repocity/snapshots/<taskId>/` 에 보관되어 1-클릭 롤백이 가능하다.
+적용 전 원본은 사용자 데이터 디렉토리(`~/.local/share/repocity/snapshots/<projectId>/<taskId>/`,
+`REPOCITY_DATA_DIR` 로 재정의)에 보관되어 1-클릭 롤백이 가능하다. 캐시 디렉토리가 아닌 데이터
+디렉토리인 이유는, 캐시는 정의상 버려도 되는 것이고 이 스냅샷은 덮어쓸 파일의 유일한 사본이기 때문이다.
+쓰기 경로는 프로젝트 루트 안으로 제한된다(`..` 이스케이프 거부).
 
 ---
 

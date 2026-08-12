@@ -7,8 +7,8 @@ and lets you point a local LLM at the ugly parts to propose refactorings. Buildi
 of code and rust over with cyclomatic complexity, so the parts of your codebase that need attention
 are the ones you notice first.
 
-> **Status: pre-alpha.** Phase 1 is done — you can analyze a repository and fly through it. The
-> refactoring agent (Phase 3) is not built yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status: pre-alpha.** Analysis, visualization, and the refactoring agent all work. What
+> remains is animating the city as changes land (Phase 4). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## The idea
 
@@ -70,6 +70,20 @@ uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
 `fixtures/sample-project` is a small Python project with a circular dependency and one
 very high complexity function deliberately planted in it, so you can see what those look
 like in the city before pointing repoCity at your own code.
+
+## Using the agent
+
+Point `LLM_BASE_URL` at any OpenAI-compatible endpoint in `.env`:
+
+```env
+LLM_BASE_URL=http://<host>:<port>/v1
+LLM_MODEL=<model served there>
+LLM_CONTEXT_BUDGET=60000
+```
+
+Select a building, type an instruction in the bar at the bottom, and read the diff before
+deciding. Nothing is written until you press Apply, the originals are snapshotted outside
+your repository, and Revert restores them byte for byte.
 
 ## Requirements
 

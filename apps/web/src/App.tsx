@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CommandBar } from './panels/CommandBar'
 import { Inspector } from './panels/Inspector'
 import { CityCanvas } from './scene/CityCanvas'
 import { useCityStore } from './store'
@@ -30,6 +31,7 @@ export function App() {
           </button>
         </form>
         {status === 'error' && <div className="error">{error}</div>}
+        <CommandBar />
       </div>
       <aside>
         <Inspector />
