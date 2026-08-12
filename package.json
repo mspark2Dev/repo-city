@@ -7,5 +7,9 @@
     "build": "pnpm --filter web build",
     "typecheck": "pnpm --filter web exec tsc -b --noEmit",
     "gen:types": "cd services/analyzer && uv run python scripts/export_schema.py ../../apps/web/citymap.schema.json && cd ../.. && pnpm --filter web gen:types"
+  },
+  "engines": {
+    "node": ">=22.13",
+    "pnpm": ">=11"
   }
 }

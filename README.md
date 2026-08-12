@@ -102,7 +102,7 @@ your repository, and Revert restores them byte for byte.
 
 ## Requirements
 
-- Node.js 20+ and pnpm
+- Node.js 22.13+ (pnpm 11 requires it) and pnpm 11+
 - Python 3.12+ (managed with [uv](https://docs.astral.sh/uv/))
 - An OpenAI-compatible LLM endpoint for the refactoring features (optional — analysis and
   visualization work without one)

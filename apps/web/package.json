@@ -27,5 +27,9 @@
     "json-schema-to-typescript": "^15.0.3",
     "typescript": "^5.6.3",
     "vite": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22.13",
+    "pnpm": ">=11"
   }
 }

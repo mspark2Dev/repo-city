@@ -97,7 +97,7 @@ LLM_CONTEXT_BUDGET=60000
 
 ## 요구사항
 
-- Node.js 20+, pnpm
+- Node.js 22.13+ (pnpm 11 의 요구사항), pnpm 11+
 - Python 3.12+ ([uv](https://docs.astral.sh/uv/) 로 관리)
 - 리팩토링 기능용 OpenAI 호환 LLM 엔드포인트 (선택 — 분석과 시각화는 없어도 동작)
 
