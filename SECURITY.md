@@ -14,6 +14,12 @@ a shell, with prompting disabled so a private repository fails instead of hangin
 file it can parse. The backend binds to loopback by default for exactly this reason — do
 not expose it on a network interface.
 
+If you need repoCity from a second machine, expose only the web dev server, which proxies
+to the analyzer server-side, and bind it to a specific private interface rather than
+`0.0.0.0`. `REPOCITY_ALLOWED_HOSTS` must then list the names you will use; Vite rejects
+unknown Host headers, which is what prevents a page you did not open from reaching a server
+bound to your machine.
+
 **It sends source code to a model endpoint.** When you ask the agent to refactor a file,
 that file and its direct dependencies are sent to whatever `LLM_BASE_URL` points at. If
 that endpoint is not one you control, treat it as publishing the code. Analysis and

@@ -98,6 +98,24 @@ uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
 very high complexity function deliberately planted in it, so you can see what those look
 like in the city before pointing repoCity at your own code.
 
+## Reaching it from another machine
+
+The dev server binds to localhost. To use repoCity from a second machine — over a VPN such
+as Tailscale, say — bind it to that interface and name the hosts you will use:
+
+```bash
+REPOCITY_WEB_HOST=100.x.y.z \
+REPOCITY_ALLOWED_HOSTS=myhost,myhost.example.ts.net \
+pnpm dev
+```
+
+Only the web server needs to be reachable: it proxies `/api` and `/ws` server-side, so the
+analyzer stays on loopback. Do not expose the analyzer itself.
+
+Bind to a specific interface rather than `0.0.0.0`. Anyone who can reach this server can
+analyze any path this machine can read and, with an agent endpoint configured, write to it.
+A private VPN interface is a reasonable place for that; a LAN or the internet is not.
+
 ## Using the agent
 
 Point `LLM_BASE_URL` at any OpenAI-compatible endpoint in `.env`:

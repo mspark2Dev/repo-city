@@ -24,6 +24,9 @@ pnpm install
 pnpm dev
 ```
 
+The dev server binds to localhost; `REPOCITY_WEB_HOST` and `REPOCITY_ALLOWED_HOSTS` change
+that when you need to reach it from another machine (see the README).
+
 Copy `.env.example` to `.env` and point `LLM_BASE_URL` at an OpenAI-compatible endpoint. The
 analyzer and the 3D view work without one; only the refactoring features need it.
 

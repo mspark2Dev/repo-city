@@ -94,6 +94,24 @@ uv run repocity analyze ../../fixtures/sample-project --stats -o citymap.json
 작은 파이썬 프로젝트다. 자기 코드에 들이대기 전에 그런 것들이 도시에서 어떻게 보이는지
 확인할 수 있다.
 
+## 다른 머신에서 접근
+
+개발 서버는 localhost 에 바인딩된다. Tailscale 같은 VPN 을 통해 다른 머신에서 쓰려면 해당
+인터페이스에 바인딩하고 사용할 호스트 이름을 명시한다:
+
+```bash
+REPOCITY_WEB_HOST=100.x.y.z \
+REPOCITY_ALLOWED_HOSTS=myhost,myhost.example.ts.net \
+pnpm dev
+```
+
+**웹 서버만 열면 된다.** `/api` 와 `/ws` 를 서버 사이드에서 프록시하므로 분석기는 루프백에
+그대로 둔다. 분석기 자체를 노출하지 말 것.
+
+`0.0.0.0` 대신 특정 인터페이스에 바인딩한다. 이 서버에 닿을 수 있는 사람은 이 머신이 읽을 수
+있는 모든 경로를 분석할 수 있고, 에이전트가 설정돼 있으면 쓸 수도 있다. 사설 VPN 인터페이스는
+납득할 만한 위치지만 LAN 이나 인터넷은 아니다.
+
 ## 에이전트 사용
 
 `.env` 의 `LLM_BASE_URL` 을 OpenAI 호환 엔드포인트로 지정한다:
